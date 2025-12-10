@@ -19,14 +19,17 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title=settings.app_name,
+    version=settings.api_version,
+    description=settings.api_description,
     debug=settings.debug,
     lifespan=lifespan,
 )
 
 # CORS middleware para permitir requests del frontend
+# Los orígenes permitidos se configuran en .env (CORS_ORIGINS)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:3000", "http://127.0.0.1:5173", "http://127.0.0.1:3000"],
+    allow_origins=settings.cors_origins_list,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -43,9 +46,22 @@ app.include_router(habito_dias.router, prefix="/api")
 
 @app.get("/")
 async def root():
-    return {"message": "Backend API", "docs": "/docs"}
+    """Endpoint raíz con información de la API."""
+    return {
+        "app": settings.app_name,
+        "version": settings.api_version,
+        "environment": settings.environment,
+        "docs": "/docs",
+        "health": "/health"
+    }
 
 
 @app.get("/health")
 async def health_check():
-    return {"status": "healthy"}
+    """Health check endpoint para verificar que la API está funcionando."""
+    return {
+        "status": "healthy",
+        "app": settings.app_name,
+        "version": settings.api_version,
+        "environment": settings.environment
+    }
