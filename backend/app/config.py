@@ -10,7 +10,12 @@ class Settings(BaseSettings):
     app_name: str = "Backend API"
     debug: bool = True
     database_url: str = f"sqlite+aiosqlite:///{BASE_DIR}/app.db"
-    
+
+    # JWT Configuration
+    secret_key: str = "tu-clave-secreta-super-segura-cambiala-en-produccion"
+    algorithm: str = "HS256"
+    access_token_expire_minutes: int = 60 * 24 * 7  # 7 días
+
     class Config:
         env_file = ".env"
 

@@ -10,6 +10,7 @@ from app.schemas import (
     RegistroCreate, RegistroUpdate, RegistroResponse, RegistroConProgresos,
     ProgresoHabitoCreate, ProgresoHabitoUpdate, ProgresoHabitoResponse
 )
+from app.dependencies import get_current_user
 
 router = APIRouter(prefix="/registros", tags=["registros"])
 
@@ -30,8 +31,9 @@ async def get_registros_by_usuario(usuario_id: int, db: AsyncSession = Depends(g
 
 @router.get("/usuario/{usuario_id}/fecha/{fecha}", response_model=RegistroConProgresos)
 async def get_or_create_registro_por_fecha(
-    usuario_id: int, 
+    usuario_id: int,
     fecha: str,  # Formato: YYYY-MM-DD
+    current_user: usuario = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -39,23 +41,25 @@ async def get_or_create_registro_por_fecha(
     Si no existe, lo crea automáticamente con los hábitos activos para ese día.
     Si la fecha es futura, verifica que el usuario tenga 'ver_futuro' activado.
     """
+    # Verificar que el usuario solo acceda a sus propios registros
+    if current_user.id != usuario_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No tienes permiso para ver los registros de otro usuario"
+        )
+
     # Validar formato de fecha
     try:
         fecha_obj = datetime.strptime(fecha, "%Y-%m-%d").date()
     except ValueError:
         raise HTTPException(status_code=400, detail="Formato de fecha inválido. Use YYYY-MM-DD")
-    
+
     # Verificar si es fecha futura
     hoy = date.today()
     if fecha_obj > hoy:
-        # Verificar si el usuario puede ver el futuro
-        user_result = await db.execute(select(usuario).where(usuario.id == usuario_id))
-        db_usuario = user_result.scalar_one_or_none()
-        if not db_usuario:
-            raise HTTPException(status_code=404, detail="Usuario no encontrado")
-        if not db_usuario.ver_futuro:
+        if not current_user.ver_futuro:
             raise HTTPException(
-                status_code=403, 
+                status_code=403,
                 detail="No puedes ver fechas futuras. Activa 'Ver futuro' en configuración."
             )
     
@@ -129,8 +133,9 @@ async def get_or_create_registro_por_fecha(
 
 @router.put("/progreso/{progreso_id}", response_model=ProgresoHabitoResponse)
 async def update_progreso(
-    progreso_id: int, 
-    progreso_data: ProgresoHabitoUpdate, 
+    progreso_id: int,
+    progreso_data: ProgresoHabitoUpdate,
+    current_user: usuario = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
     """Actualiza el progreso de un hábito específico."""
@@ -140,6 +145,17 @@ async def update_progreso(
     db_progreso = result.scalar_one_or_none()
     if not db_progreso:
         raise HTTPException(status_code=404, detail="Progreso no encontrado")
+
+    # Verificar que el progreso pertenece a un registro del usuario autenticado
+    registro_result = await db.execute(
+        select(registros).where(registros.id == db_progreso.registro_id)
+    )
+    registro = registro_result.scalar_one_or_none()
+    if not registro or registro.usuario_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No tienes permiso para modificar este progreso"
+        )
     
     update_data = progreso_data.model_dump(exclude_unset=True)
     for key, value in update_data.items():
@@ -151,7 +167,11 @@ async def update_progreso(
 
 
 @router.post("/progreso/toggle/{progreso_id}", response_model=ProgresoHabitoResponse)
-async def toggle_progreso(progreso_id: int, db: AsyncSession = Depends(get_db)):
+async def toggle_progreso(
+    progreso_id: int,
+    current_user: usuario = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
     """Alterna el estado de completado de un progreso."""
     result = await db.execute(
         select(progreso_habitos).where(progreso_habitos.id == progreso_id)
@@ -159,6 +179,17 @@ async def toggle_progreso(progreso_id: int, db: AsyncSession = Depends(get_db)):
     db_progreso = result.scalar_one_or_none()
     if not db_progreso:
         raise HTTPException(status_code=404, detail="Progreso no encontrado")
+
+    # Verificar que el progreso pertenece a un registro del usuario autenticado
+    registro_result = await db.execute(
+        select(registros).where(registros.id == db_progreso.registro_id)
+    )
+    registro = registro_result.scalar_one_or_none()
+    if not registro or registro.usuario_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No tienes permiso para modificar este progreso"
+        )
     
     # Obtener la meta del hábito
     habito_result = await db.execute(

@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { getUsuario, updateUsuario } from '$lib/api';
+  import { authStore } from '$lib/stores/auth.svelte';
 
   const USUARIO_ID = 1; // TODO: obtener del contexto de auth
 
@@ -15,6 +16,12 @@
   let saving = $state(false);
   let saved = $state(false);
   let loading = $state(true);
+
+  function cerrarSesion() {
+    authStore.logout();
+    // Redirigir al login
+    window.location.href = '/login';
+  }
 
   onMount(async () => {
     try {
@@ -204,7 +211,7 @@
     <button
       onclick={handleSave}
       disabled={saving}
-      class="w-full py-3 px-4 rounded bg-accent text-white font-bold hover:bg-accent/80 transition-colors disabled:opacity-50"
+      class="w-full py-3 px-4 rounded bg-accent text-white font-bold hover:bg-accent/80 transition-colors disabled:opacity-50 mb-2"
     >
       {#if saving}
         Guardando...
@@ -213,6 +220,14 @@
       {:else}
         Guardar cambios
       {/if}
+    </button>
+
+    <!-- Cerrar sesión -->
+    <button
+      onclick={cerrarSesion}
+      class="w-full py-3 px-4 rounded bg-error text-white font-bold hover:bg-error/80 transition-colors mt-2"
+    >
+      🔒 Cerrar sesión
     </button>
   </div>
 </div>

@@ -1,32 +1,33 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { 
-    getHabitosByUsuario, 
-    getUsuario,
-    getRegistroPorFecha, 
+  import {
+    getMyHabitos,
+    getCurrentUser,
+    getRegistroPorFecha,
     toggleProgreso,
-    type Habito, 
+    type Habito,
     type Usuario,
     type RegistroConProgresos,
     type ProgresoHabito
   } from '$lib/api';
+  import { authStore } from '$lib/stores/auth.svelte';
+  import { goto } from '$app/navigation';
 
   let habitos = $state<Habito[]>([]);
   let usuario = $state<Usuario | null>(null);
   let registro = $state<RegistroConProgresos | null>(null);
   let loading = $state(true);
   let error = $state<string | null>(null);
-  
+
   // Fecha seleccionada - iniciar con hoy
   let fechaActual = $state(new Date());
-  
+
   // Estado para animaciones y notificaciones
   let sacudir = $state(false);
   let notificacion = $state<string | null>(null);
 
   const diasSemanaCorto = ['DOM', 'LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB'];
   const diasSemanaLetra = ['D', 'L', 'M', 'X', 'J', 'V', 'S'];
-  const USUARIO_ID = 1;
 
   function mostrarNotificacion(mensaje: string) {
     notificacion = mensaje;
@@ -43,26 +44,44 @@
     try {
       loading = true;
       error = null;
-      
-      // Cargar usuario y hábitos
+
+      // Verificar que el usuario esté autenticado
+      if (!authStore.isAuthenticated) {
+        goto('/login');
+        return;
+      }
+
+      // Cargar usuario actual y hábitos
       [usuario, habitos] = await Promise.all([
-        getUsuario(USUARIO_ID),
-        getHabitosByUsuario(USUARIO_ID)
+        getCurrentUser(),
+        getMyHabitos()
       ]);
-      
+
+      // Actualizar el store con los datos más recientes del usuario
+      if (usuario) {
+        authStore.updateUsuario(usuario);
+      }
+
       // Cargar registro del día
       await cargarRegistro();
     } catch (e) {
       error = e instanceof Error ? e.message : 'Error cargando datos';
+      // Si hay error 401, redirigir al login
+      if (e instanceof Error && e.message.includes('401')) {
+        authStore.logout();
+        goto('/login');
+      }
     } finally {
       loading = false;
     }
   }
 
   async function cargarRegistro() {
+    if (!usuario) return;
+
     try {
       const fechaStr = getFechaISO();
-      registro = await getRegistroPorFecha(USUARIO_ID, fechaStr);
+      registro = await getRegistroPorFecha(usuario.id, fechaStr);
       error = null;
     } catch (e) {
       if (e instanceof Error && e.message.includes('futuro')) {

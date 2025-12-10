@@ -3,6 +3,36 @@ from datetime import datetime
 from typing import Optional
 
 
+# ==================== Auth Schemas ====================
+class LoginRequest(BaseModel):
+    """Schema para la solicitud de login"""
+    email: EmailStr
+    contrasena: str = Field(..., min_length=1)
+
+
+class RegisterRequest(BaseModel):
+    """Schema para la solicitud de registro"""
+    nombre: str = Field(..., min_length=1, max_length=100)
+    email: EmailStr
+    contrasena: str = Field(..., min_length=6)
+
+
+class TokenResponse(BaseModel):
+    """Schema para la respuesta con token de acceso"""
+    access_token: str
+    token_type: str = "bearer"
+    usuario: "UsuarioResponse"
+
+
+class AuthResponse(BaseModel):
+    """Schema para la respuesta de autenticación"""
+    success: bool
+    message: str
+    usuario: Optional["UsuarioResponse"] = None
+    access_token: Optional[str] = None
+    token_type: str = "bearer"
+
+
 # ==================== Usuario Schemas ====================
 class UsuarioBase(BaseModel):
     nombre: str = Field(..., min_length=1, max_length=100)
