@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)
+![Version](https://img.shields.io/badge/version-2.0.0-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688.svg?logo=fastapi)
 ![SvelteKit](https://img.shields.io/badge/SvelteKit-2.0-FF3E00.svg?logo=svelte)
@@ -20,6 +20,8 @@
 
 **Marco** es una aplicación full-stack de seguimiento de hábitos que te ayuda a construir y mantener rutinas saludables. Con una interfaz elegante y moderna, puedes:
 
+- 🔐 **Sistema de autenticación completo** con JWT (registro, login, logout)
+- 👤 **Datos separados por usuario** - cada usuario ve solo sus propios hábitos
 - ✅ Crear y gestionar hábitos personalizados
 - 📅 Programar hábitos para días específicos de la semana
 - 📊 Visualizar tu progreso diario con barras de progreso animadas
@@ -40,11 +42,14 @@
 ### 📱 Funcionalidades
 | Característica | Descripción |
 |----------------|-------------|
+| 🔐 **Autenticación JWT** | Registro, login y logout seguros con tokens JWT |
+| 👤 **Multi-usuario** | Cada usuario tiene sus propios datos completamente separados |
+| 🛡️ **Protección de Rutas** | Redirección automática a login si no estás autenticado |
 | 🎯 **Gestión de Hábitos** | Crear, editar y eliminar hábitos con facilidad |
 | 📅 **Programación Flexible** | Asigna hábitos a días específicos (L, M, X, J, V, S, D) |
 | 📈 **Seguimiento de Progreso** | Registra valores y marca hábitos como completados |
 | 🗓️ **Navegación por Fechas** | Navega entre días para revisar tu historial |
-| ⚙️ **Configuración de Usuario** | Controla si puedes ver días futuros |
+| ⚙️ **Configuración de Usuario** | Controla si puedes ver días futuros y edita tu perfil |
 | 🗑️ **Eliminación en Cascada** | Al eliminar un hábito, se eliminan todos sus registros |
 
 ### 🎭 Efectos Visuales
@@ -63,6 +68,8 @@
 ⚡ FastAPI - Framework web moderno y de alto rendimiento
 🗃️ SQLAlchemy - ORM asíncrono con aiosqlite
 📦 Pydantic v2 - Validación de datos
+🔒 BCrypt - Hashing seguro de contraseñas
+🔑 Python-Jose - Generación y verificación de tokens JWT
 🔄 Uvicorn - Servidor ASGI
 📧 Email-Validator - Validación de emails
 ```
@@ -95,11 +102,13 @@ marco/
 │   │   ├── 📄 database.py      # Conexión a BD y sesiones
 │   │   ├── 📄 models.py        # Modelos SQLAlchemy
 │   │   ├── 📄 schemas.py       # Esquemas Pydantic
+│   │   ├── 📄 security.py      # Autenticación y seguridad
 │   │   └── 📂 routers/
+│   │       ├── 📄 auth.py          # 🔐 Registro, login, perfil
 │   │       ├── 📄 usuarios.py      # CRUD de usuarios
 │   │       ├── 📄 categorias.py    # CRUD de categorías
-│   │       ├── 📄 habitos.py       # CRUD de hábitos
-│   │       ├── 📄 registros.py     # Registros diarios
+│   │       ├── 📄 habitos.py       # CRUD de hábitos (protegido)
+│   │       ├── 📄 registros.py     # Registros diarios (protegido)
 │   │       └── 📄 habito_dias.py   # Días de hábitos
 │   ├── 📄 pyproject.toml       # Dependencias Python (UV)
 │   └── 📄 app.db               # Base de datos SQLite
@@ -107,25 +116,30 @@ marco/
 ├── 📂 frontend/
 │   ├── 📂 src/
 │   │   ├── 📂 lib/
-│   │   │   ├── 📄 api.ts           # Cliente API
+│   │   │   ├── 📄 api.ts           # Cliente API con auth
+│   │   │   ├── 📂 stores/
+│   │   │   │   └── 📄 auth.svelte.ts  # 🔐 Auth store (Svelte 5 Runes)
 │   │   │   └── 📂 components/
 │   │   │       ├── 📄 Chart.svelte
 │   │   │       ├── 📄 ConfirmModal.svelte
 │   │   │       └── 📄 HabitoForm.svelte
 │   │   └── 📂 routes/
 │   │       ├── 📄 +page.svelte     # Página de progreso
-│   │       ├── 📄 +layout.svelte   # Layout principal
+│   │       ├── 📄 +layout.svelte   # Layout con protección de rutas
+│   │       ├── 📂 login/           # 🔐 Login
+│   │       ├── 📂 register/        # 🔐 Registro
 │   │       ├── 📂 habitos/         # Gestión de hábitos
 │   │       ├── 📂 charts/          # Visualizaciones
 │   │       ├── 📂 items/           # Items
 │   │       ├── 📂 progreso/        # Progreso detallado
-│   │       └── 📂 settings/        # Configuración
+│   │       └── 📂 settings/        # Configuración de usuario
 │   ├── 📄 package.json
 │   ├── 📄 svelte.config.js
 │   ├── 📄 vite.config.ts
 │   └── 📄 tsconfig.json
 │
-└── 📄 README.md
+├── 📄 README.md
+└── 📄 AUTENTICACION.md         # 🔐 Guía de autenticación
 ```
 
 ---
@@ -176,6 +190,53 @@ pnpm dev
 ```
 
 El frontend estará disponible en: `http://localhost:5173`
+
+---
+
+## 🔐 Autenticación y Seguridad
+
+Marco implementa un sistema de autenticación robusto y seguro:
+
+### Características de Seguridad
+
+- **🔑 JWT Tokens** - Autenticación basada en tokens con expiración de 7 días
+- **🔒 BCrypt** - Hashing de contraseñas con bcrypt (límite de 72 bytes)
+- **🛡️ Protección de Rutas** - Todos los endpoints de hábitos y registros están protegidos
+- **👤 Separación de Datos** - Cada usuario solo puede acceder a sus propios datos
+- **🔄 Auto-redirect** - Redirección automática a login si el token expira (401)
+- **📱 Estado Reactivo** - Auth store con Svelte 5 Runes para estado global
+
+### Primeros Pasos
+
+1. **Registra una cuenta** en `/register`
+2. **Inicia sesión** en `/login` - recibirás un token JWT
+3. **Crea tus hábitos** - solo tú podrás verlos y editarlos
+4. **Edita tu perfil** en `/settings` - actualiza nombre, email o activa "ver futuro"
+
+### Para Desarrolladores
+
+📖 Consulta [AUTENTICACION.md](AUTENTICACION.md) para:
+- Detalles técnicos de implementación
+- Ejemplos de código para integración
+- Estructura de tokens JWT
+- Breaking changes en la API
+
+### ⚠️ Importante para Producción
+
+**Antes de desplegar en producción, DEBES cambiar el `secret_key` en `backend/app/config.py`:**
+
+```bash
+# Genera una clave segura:
+openssl rand -hex 32
+
+# Actualiza backend/app/config.py:
+secret_key: str = "tu-clave-super-secreta-generada-aqui"
+```
+
+O mejor aún, usa variables de entorno:
+```bash
+export SECRET_KEY="tu-clave-super-secreta-generada-aqui"
+```
 
 ---
 
@@ -240,6 +301,14 @@ erDiagram
 
 ## 🔌 API Endpoints
 
+### 🔐 Autenticación (Públicos)
+| Método | Endpoint | Descripción |
+|--------|----------|-------------|
+| `POST` | `/api/auth/register` | Registrar nuevo usuario |
+| `POST` | `/api/auth/login` | Iniciar sesión (retorna JWT) |
+| `GET` | `/api/auth/me` | 🔒 Obtener usuario actual |
+| `PUT` | `/api/auth/me` | 🔒 Actualizar usuario actual |
+
 ### 👤 Usuarios
 | Método | Endpoint | Descripción |
 |--------|----------|-------------|
@@ -252,22 +321,26 @@ erDiagram
 ### 📁 Categorías
 | Método | Endpoint | Descripción |
 |--------|----------|-------------|
-| `GET` | `/api/categorias/` | Listar categorías |
-| `POST` | `/api/categorias/` | Crear categoría |
+| `GET` | `/api/categorias/` | 🔒 Listar categorías |
+| `POST` | `/api/categorias/` | 🔒 Crear categoría |
 
-### 🎯 Hábitos
+### 🎯 Hábitos (Protegidos 🔒)
 | Método | Endpoint | Descripción |
 |--------|----------|-------------|
-| `GET` | `/api/habitos/usuario/{id}` | Hábitos de un usuario |
-| `POST` | `/api/habitos/` | Crear hábito |
-| `PUT` | `/api/habitos/{id}/` | Actualizar hábito |
+| `GET` | `/api/habitos/` | Obtener hábitos del usuario autenticado |
+| `POST` | `/api/habitos/` | Crear hábito para usuario autenticado |
+| `GET` | `/api/habitos/{id}` | Obtener hábito por ID |
+| `PUT` | `/api/habitos/{id}` | Actualizar hábito |
 | `DELETE` | `/api/habitos/{id}` | Eliminar hábito (cascada) |
 
-### 📅 Registros
+### 📅 Registros (Protegidos 🔒)
 | Método | Endpoint | Descripción |
 |--------|----------|-------------|
-| `GET` | `/api/registros/usuario/{id}/fecha/{fecha}` | Obtener/crear registro |
-| `PUT` | `/api/registros/{id}/progreso/{progreso_id}/` | Actualizar progreso |
+| `GET` | `/api/registros/fecha/{fecha}` | Obtener/crear registro para fecha |
+| `POST` | `/api/registros/progreso/toggle/{id}` | Alternar completado de progreso |
+| `PUT` | `/api/registros/progreso/{id}` | Actualizar valor de progreso |
+
+> **🔒 Nota:** Los endpoints marcados requieren autenticación con Bearer Token JWT
 
 ---
 
