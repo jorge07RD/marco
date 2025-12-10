@@ -1,11 +1,12 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import {
-    getHabitosByUsuario,
+    getHabitos,
     deleteHabito,
     getRegistroPorFecha,
     type Habito,
   } from "$lib/api";
+  import { authStore } from "$lib/stores/auth.svelte";
   import HabitoForm from "$lib/components/HabitoForm.svelte";
   import ConfirmModal from "$lib/components/ConfirmModal.svelte";
 
@@ -31,9 +32,9 @@
   async function verificarRegistroHoy() {
     try {
       const fecha = getFechaISO();
-      const response = await fetch(`http://127.0.0.1:8000/api/registros/usuario/1/fecha/${fecha}`);
-      // Si responde 200, el registro existe
-      registroExiste = response.ok;
+      await getRegistroPorFecha(fecha);
+      // Si no lanza error, el registro existe
+      registroExiste = true;
     } catch {
       registroExiste = false;
     }
@@ -43,7 +44,7 @@
     try {
       loading = true;
       error = null;
-      habitos = await getHabitosByUsuario(1);
+      habitos = await getHabitos();
     } catch (e) {
       error = e instanceof Error ? e.message : "Error cargando hábitos";
     } finally {
@@ -151,7 +152,7 @@
     mensajeRegistro = null;
     try {
       const fecha = getFechaISO();
-      const registro = await getRegistroPorFecha(1, fecha);
+      const registro = await getRegistroPorFecha(fecha);
       registroExiste = true;
       mensajeRegistro = `✅ Registro creado con ${registro.progresos.length} hábitos para hoy`;
       // Ocultar mensaje después de 3 segundos

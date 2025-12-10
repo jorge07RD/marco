@@ -1,11 +1,10 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { getUsuario, updateUsuario } from '$lib/api';
-
-  const USUARIO_ID = 1; // TODO: obtener del contexto de auth
+  import { obtenerUsuarioActual, updateUsuario } from '$lib/api';
+  import { authStore } from '$lib/stores/auth.svelte';
 
   // Configuración del usuario
-  let nombreUsuario = $state("Jorge");
+  let nombreUsuario = $state("");
   let email = $state("");
   let verFuturo = $state(false);
   let notificaciones = $state(true);
@@ -18,7 +17,7 @@
 
   onMount(async () => {
     try {
-      const usuario = await getUsuario(USUARIO_ID);
+      const usuario = authStore.user || await obtenerUsuarioActual();
       nombreUsuario = usuario.nombre;
       email = usuario.email;
       verFuturo = usuario.ver_futuro;
@@ -33,7 +32,9 @@
   async function toggleVerFuturo() {
     verFuturo = !verFuturo;
     try {
-      await updateUsuario(USUARIO_ID, { ver_futuro: verFuturo });
+      const updatedUser = await updateUsuario({ ver_futuro: verFuturo });
+      // Actualizar el authStore con el usuario actualizado
+      authStore.setUser(updatedUser);
       console.log('ver_futuro guardado:', verFuturo);
     } catch (error) {
       console.error('Error guardando ver_futuro:', error);
@@ -45,11 +46,13 @@
   async function handleSave() {
     saving = true;
     try {
-      await updateUsuario(USUARIO_ID, {
+      const updatedUser = await updateUsuario({
         nombre: nombreUsuario,
         email: email,
         ver_futuro: verFuturo
       });
+      // Actualizar el authStore con el usuario actualizado
+      authStore.setUser(updatedUser);
       saved = true;
       setTimeout(() => saved = false, 2000);
     } catch (error) {

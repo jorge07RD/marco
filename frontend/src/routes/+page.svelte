@@ -1,32 +1,32 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { 
-    getHabitosByUsuario, 
-    getUsuario,
-    getRegistroPorFecha, 
+  import {
+    getHabitos,
+    obtenerUsuarioActual,
+    getRegistroPorFecha,
     toggleProgreso,
-    type Habito, 
+    type Habito,
     type Usuario,
     type RegistroConProgresos,
     type ProgresoHabito
   } from '$lib/api';
+  import { authStore } from '$lib/stores/auth.svelte';
 
   let habitos = $state<Habito[]>([]);
   let usuario = $state<Usuario | null>(null);
   let registro = $state<RegistroConProgresos | null>(null);
   let loading = $state(true);
   let error = $state<string | null>(null);
-  
+
   // Fecha seleccionada - iniciar con hoy
   let fechaActual = $state(new Date());
-  
+
   // Estado para animaciones y notificaciones
   let sacudir = $state(false);
   let notificacion = $state<string | null>(null);
 
   const diasSemanaCorto = ['DOM', 'LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB'];
   const diasSemanaLetra = ['D', 'L', 'M', 'X', 'J', 'V', 'S'];
-  const USUARIO_ID = 1;
 
   function mostrarNotificacion(mensaje: string) {
     notificacion = mensaje;
@@ -43,13 +43,13 @@
     try {
       loading = true;
       error = null;
-      
-      // Cargar usuario y hábitos
-      [usuario, habitos] = await Promise.all([
-        getUsuario(USUARIO_ID),
-        getHabitosByUsuario(USUARIO_ID)
-      ]);
-      
+
+      // Obtener usuario del auth store o de la API
+      usuario = authStore.user || await obtenerUsuarioActual();
+
+      // Cargar hábitos (ahora usa el usuario autenticado automáticamente)
+      habitos = await getHabitos();
+
       // Cargar registro del día
       await cargarRegistro();
     } catch (e) {
@@ -62,7 +62,7 @@
   async function cargarRegistro() {
     try {
       const fechaStr = getFechaISO();
-      registro = await getRegistroPorFecha(USUARIO_ID, fechaStr);
+      registro = await getRegistroPorFecha(fechaStr);
       error = null;
     } catch (e) {
       if (e instanceof Error && e.message.includes('futuro')) {
