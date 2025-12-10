@@ -1,4 +1,7 @@
-const API_BASE = 'http://127.0.0.1:8000/api';
+// URL base de la API cargada desde variables de entorno
+// En desarrollo: http://127.0.0.1:8000/api
+// En producción: configurar VITE_API_URL en .env
+const API_BASE = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api';
 
 // ==================== Auth Token Management ====================
 export function guardarToken(token: string): void {
