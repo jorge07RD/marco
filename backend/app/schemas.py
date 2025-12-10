@@ -65,8 +65,16 @@ class HabitoBase(BaseModel):
     activo: int = Field(default=1)
 
 
-class HabitoCreate(HabitoBase):
-    pass
+class HabitoCreate(BaseModel):
+    """Esquema para creación de hábito (sin usuario_id, se toma del token)."""
+    nombre: str = Field(..., min_length=1, max_length=100)
+    descripcion: Optional[str] = None
+    categoria_id: int
+    unidad_medida: str = Field(..., max_length=50)
+    meta_diaria: float
+    dias: str  # JSON string: '["L", "M", "X"]'
+    color: str = Field(..., max_length=20)
+    activo: int = Field(default=1)
 
 
 class HabitoUpdate(BaseModel):
@@ -200,3 +208,59 @@ class HabitoConCategoria(HabitoResponse):
 
 class UsuarioConHabitos(UsuarioResponse):
     habitos: list[HabitoResponse] = []
+
+
+# ==================== Auth Schemas ====================
+class LoginRequest(BaseModel):
+    """Esquema para solicitud de login."""
+    email: EmailStr = Field(..., description="Email del usuario")
+    password: str = Field(..., min_length=6, description="Contraseña del usuario")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "email": "usuario@example.com",
+                "password": "MiPassword123"
+            }
+        }
+
+
+class RegisterRequest(BaseModel):
+    """Esquema para solicitud de registro."""
+    nombre: str = Field(..., min_length=1, max_length=100, description="Nombre del usuario")
+    email: EmailStr = Field(..., description="Email único del usuario")
+    password: str = Field(..., min_length=8, description="Contraseña (mínimo 8 caracteres)")
+    ver_futuro: bool = Field(default=False, description="Permite ver fechas futuras")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "nombre": "Juan Pérez",
+                "email": "juan@example.com",
+                "password": "MiPassword123",
+                "ver_futuro": False
+            }
+        }
+
+
+class TokenResponse(BaseModel):
+    """Esquema de respuesta con token de acceso."""
+    access_token: str = Field(..., description="Token JWT de acceso")
+    token_type: str = Field(default="bearer", description="Tipo de token")
+    user: UsuarioResponse = Field(..., description="Datos del usuario autenticado")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+                "token_type": "bearer",
+                "user": {
+                    "id": 1,
+                    "nombre": "Juan Pérez",
+                    "email": "juan@example.com",
+                    "ver_futuro": False,
+                    "created_at": "2025-12-10T10:00:00",
+                    "updated_at": None
+                }
+            }
+        }

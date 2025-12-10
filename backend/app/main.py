@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
 from app.database import init_db
-from app.routers import usuarios, categorias, habitos, registros, habito_dias
+from app.routers import usuarios, categorias, habitos, registros, habito_dias, auth
 
 settings = get_settings()
 
@@ -33,6 +33,7 @@ app.add_middleware(
 )
 
 # Routers
+app.include_router(auth.router, prefix="/api")  # Auth router sin protección
 app.include_router(usuarios.router, prefix="/api")
 app.include_router(categorias.router, prefix="/api")
 app.include_router(habitos.router, prefix="/api")

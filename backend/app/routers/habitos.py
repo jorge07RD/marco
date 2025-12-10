@@ -6,8 +6,9 @@ from datetime import date
 import json
 
 from app.database import get_db
-from app.models import habitos, registros, progreso_habitos
+from app.models import habitos, registros, progreso_habitos, usuario
 from app.schemas import HabitoCreate, HabitoUpdate, HabitoResponse
+from app.security import get_current_user
 
 router = APIRouter(prefix="/habitos", tags=["habitos"])
 
@@ -96,24 +97,34 @@ async def quitar_habito_de_registro_hoy(habito_id: int, usuario_id: int, db: Asy
 
 
 @router.get("/", response_model=List[HabitoResponse])
-async def get_habitos(skip: int = 0, limit: int = 100, db: AsyncSession = Depends(get_db)):
-    """Obtiene la lista de todos los hábitos con paginación."""
-    result = await db.execute(select(habitos).offset(skip).limit(limit))
-    return result.scalars().all()
-
-
-@router.get("/usuario/{usuario_id}")
-async def get_habitos_by_usuario(usuario_id: int, db: AsyncSession = Depends(get_db)):
-    """Obtiene todos los hábitos de un usuario específico."""
-    # await asyncio.sleep(9)  # 3 segundos
-    result = await db.execute(select(habitos).where(habitos.usuario_id == usuario_id))
+async def get_habitos(
+    skip: int = 0,
+    limit: int = 100,
+    current_user: usuario = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Obtiene todos los hábitos del usuario autenticado con paginación."""
+    result = await db.execute(
+        select(habitos)
+        .where(habitos.usuario_id == current_user.id)
+        .offset(skip)
+        .limit(limit)
+    )
     return result.scalars().all()
 
 
 @router.get("/{habito_id}", response_model=HabitoResponse)
-async def get_habito(habito_id: int, db: AsyncSession = Depends(get_db)):
-    """Obtiene un hábito específico por su ID."""
-    result = await db.execute(select(habitos).where(habitos.id == habito_id))
+async def get_habito(
+    habito_id: int,
+    current_user: usuario = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Obtiene un hábito específico por su ID (solo si pertenece al usuario)."""
+    result = await db.execute(
+        select(habitos).where(
+            and_(habitos.id == habito_id, habitos.usuario_id == current_user.id)
+        )
+    )
     db_habito = result.scalar_one_or_none()
     if not db_habito:
         raise HTTPException(status_code=404, detail="Hábito no encontrado")
@@ -121,26 +132,43 @@ async def get_habito(habito_id: int, db: AsyncSession = Depends(get_db)):
 
 
 @router.post("/", response_model=HabitoResponse, status_code=status.HTTP_201_CREATED)
-async def create_habito(habito_data: HabitoCreate, db: AsyncSession = Depends(get_db)):
-    """Crea un nuevo hábito para el usuario."""
-    db_habito = habitos(**habito_data.model_dump())
+async def create_habito(
+    habito_data: HabitoCreate,
+    current_user: usuario = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Crea un nuevo hábito para el usuario autenticado."""
+    # Agregar el usuario_id del usuario autenticado
+    habito_dict = habito_data.model_dump()
+    habito_dict['usuario_id'] = current_user.id
+
+    db_habito = habitos(**habito_dict)
     db.add(db_habito)
     await db.flush()  # Para obtener el ID
-    
+
     # Si el día actual está en los días del hábito y está activo, agregarlo al registro de hoy
     dia_hoy = get_dia_letra_hoy()
     if db_habito.activo and dia_en_lista(db_habito.dias, dia_hoy):
-        await agregar_habito_a_registro_hoy(db_habito.id, db_habito.usuario_id, db)
-    
+        await agregar_habito_a_registro_hoy(db_habito.id, current_user.id, db)
+
     await db.commit()
     await db.refresh(db_habito)
     return db_habito
 
 
 @router.put("/{habito_id}", response_model=HabitoResponse)
-async def update_habito(habito_id: int, habito_data: HabitoUpdate, db: AsyncSession = Depends(get_db)):
-    """Actualiza la configuración de un hábito existente."""
-    result = await db.execute(select(habitos).where(habitos.id == habito_id))
+async def update_habito(
+    habito_id: int,
+    habito_data: HabitoUpdate,
+    current_user: usuario = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Actualiza la configuración de un hábito existente (solo si pertenece al usuario)."""
+    result = await db.execute(
+        select(habitos).where(
+            and_(habitos.id == habito_id, habitos.usuario_id == current_user.id)
+        )
+    )
     db_habito = result.scalar_one_or_none()
     if not db_habito:
         raise HTTPException(status_code=404, detail="Hábito no encontrado")
@@ -171,9 +199,17 @@ async def update_habito(habito_id: int, habito_data: HabitoUpdate, db: AsyncSess
 
 
 @router.delete("/{habito_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_habito(habito_id: int, db: AsyncSession = Depends(get_db)):
-    """Elimina un hábito del sistema por su ID y todos sus progresos asociados."""
-    result = await db.execute(select(habitos).where(habitos.id == habito_id))
+async def delete_habito(
+    habito_id: int,
+    current_user: usuario = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Elimina un hábito del usuario por su ID (solo si pertenece al usuario)."""
+    result = await db.execute(
+        select(habitos).where(
+            and_(habitos.id == habito_id, habitos.usuario_id == current_user.id)
+        )
+    )
     db_habito = result.scalar_one_or_none()
     if not db_habito:
         raise HTTPException(status_code=404, detail="Hábito no encontrado")

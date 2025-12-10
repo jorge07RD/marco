@@ -10,32 +10,36 @@ from app.schemas import (
     RegistroCreate, RegistroUpdate, RegistroResponse, RegistroConProgresos,
     ProgresoHabitoCreate, ProgresoHabitoUpdate, ProgresoHabitoResponse
 )
+from app.security import get_current_user
 
 router = APIRouter(prefix="/registros", tags=["registros"])
 
 
 @router.get("/", response_model=List[RegistroResponse])
-async def get_registros(skip: int = 0, limit: int = 100, db: AsyncSession = Depends(get_db)):
-    """Obtiene la lista de todos los registros."""
-    result = await db.execute(select(registros).offset(skip).limit(limit))
+async def get_registros(
+    skip: int = 0,
+    limit: int = 100,
+    current_user: usuario = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Obtiene todos los registros del usuario autenticado."""
+    result = await db.execute(
+        select(registros)
+        .where(registros.usuario_id == current_user.id)
+        .offset(skip)
+        .limit(limit)
+    )
     return result.scalars().all()
 
 
-@router.get("/usuario/{usuario_id}", response_model=List[RegistroResponse])
-async def get_registros_by_usuario(usuario_id: int, db: AsyncSession = Depends(get_db)):
-    """Obtiene todos los registros de un usuario específico."""
-    result = await db.execute(select(registros).where(registros.usuario_id == usuario_id))
-    return result.scalars().all()
-
-
-@router.get("/usuario/{usuario_id}/fecha/{fecha}", response_model=RegistroConProgresos)
+@router.get("/fecha/{fecha}", response_model=RegistroConProgresos)
 async def get_or_create_registro_por_fecha(
-    usuario_id: int, 
     fecha: str,  # Formato: YYYY-MM-DD
+    current_user: usuario = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Obtiene el registro de un usuario para una fecha específica.
+    Obtiene el registro del usuario autenticado para una fecha específica.
     Si no existe, lo crea automáticamente con los hábitos activos para ese día.
     Si la fecha es futura, verifica que el usuario tenga 'ver_futuro' activado.
     """
@@ -44,42 +48,37 @@ async def get_or_create_registro_por_fecha(
         fecha_obj = datetime.strptime(fecha, "%Y-%m-%d").date()
     except ValueError:
         raise HTTPException(status_code=400, detail="Formato de fecha inválido. Use YYYY-MM-DD")
-    
+
     # Verificar si es fecha futura
     hoy = date.today()
     if fecha_obj > hoy:
-        # Verificar si el usuario puede ver el futuro
-        user_result = await db.execute(select(usuario).where(usuario.id == usuario_id))
-        db_usuario = user_result.scalar_one_or_none()
-        if not db_usuario:
-            raise HTTPException(status_code=404, detail="Usuario no encontrado")
-        if not db_usuario.ver_futuro:
+        if not current_user.ver_futuro:
             raise HTTPException(
-                status_code=403, 
+                status_code=403,
                 detail="No puedes ver fechas futuras. Activa 'Ver futuro' en configuración."
             )
     
     # Buscar registro existente
     result = await db.execute(
         select(registros).where(
-            and_(registros.usuario_id == usuario_id, registros.fecha == fecha)
+            and_(registros.usuario_id == current_user.id, registros.fecha == fecha)
         )
     )
     db_registro = result.scalar_one_or_none()
-    
+
     # Si no existe, crear uno nuevo
     if not db_registro:
-        db_registro = registros(usuario_id=usuario_id, fecha=fecha)
+        db_registro = registros(usuario_id=current_user.id, fecha=fecha)
         db.add(db_registro)
         await db.flush()
-        
+
         # Obtener hábitos activos del usuario para ese día de la semana
         dias_semana = ['D', 'L', 'M', 'X', 'J', 'V', 'S']
         dia_letra = dias_semana[fecha_obj.weekday() + 1] if fecha_obj.weekday() < 6 else dias_semana[0]
-        
+
         habitos_result = await db.execute(
             select(habitos).where(
-                and_(habitos.usuario_id == usuario_id, habitos.activo == 1)
+                and_(habitos.usuario_id == current_user.id, habitos.activo == 1)
             )
         )
         habitos_usuario = habitos_result.scalars().all()

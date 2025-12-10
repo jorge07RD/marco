@@ -10,7 +10,10 @@ class Settings(BaseSettings):
     app_name: str = "Backend API"
     debug: bool = True
     database_url: str = f"sqlite+aiosqlite:///{BASE_DIR}/app.db"
-    
+
+    # JWT Configuration
+    secret_key: str = "your-secret-key-change-this-in-production-use-openssl-rand-hex-32"
+
     class Config:
         env_file = ".env"
 
