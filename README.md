@@ -25,6 +25,8 @@
 - ✅ Crear y gestionar hábitos personalizados
 - 📅 Programar hábitos para días específicos de la semana
 - 📊 Visualizar tu progreso diario con barras de progreso animadas
+- 📈 **Análisis avanzado con 8 tipos de gráficos** (Area, Polar, Pie, Spline, Column, Gauge, Radar, Bar)
+- 🗓️ **Filtros de fecha flexibles** con shortcuts rápidos (este mes, última semana, etc.)
 - 🎨 Personalizar colores para cada hábito
 - 🔔 Recibir notificaciones visuales cuando no puedes ver el futuro
 - ✨ Disfrutar de animaciones fluidas y efectos visuales atractivos
@@ -49,6 +51,8 @@
 | 📅 **Programación Flexible** | Asigna hábitos a días específicos (L, M, X, J, V, S, D) |
 | 📈 **Seguimiento de Progreso** | Registra valores y marca hábitos como completados |
 | 🗓️ **Navegación por Fechas** | Navega entre días para revisar tu historial |
+| 📊 **Análisis Avanzado** | 8 gráficos interactivos con Highcharts para visualizar tu rendimiento |
+| 📈 **Reportes Personalizados** | Filtra por rango de fechas y obtén insights de tu progreso |
 | ⚙️ **Configuración de Usuario** | Controla si puedes ver días futuros y edita tu perfil |
 | 🗑️ **Eliminación en Cascada** | Al eliminar un hábito, se eliminan todos sus registros |
 
@@ -79,6 +83,7 @@
 🔥 SvelteKit 2.0 - Framework de aplicaciones web
 ⚡ Svelte 5 - Con Runes ($state, $effect)
 🎨 Tailwind CSS 4 - Framework de utilidades CSS
+📊 Highcharts 12 - Librería de gráficos interactivos
 📦 Vite 6 - Build tool ultrarrápido
 📝 TypeScript - Tipado estático
 ```
@@ -109,6 +114,7 @@ marco/
 │   │       ├── 📄 categorias.py    # CRUD de categorías
 │   │       ├── 📄 habitos.py       # CRUD de hábitos (protegido)
 │   │       ├── 📄 registros.py     # Registros diarios (protegido)
+│   │       ├── 📄 analisis.py      # 📊 Endpoints de análisis (protegido)
 │   │       └── 📄 habito_dias.py   # Días de hábitos
 │   ├── 📄 pyproject.toml       # Dependencias Python (UV)
 │   └── 📄 app.db               # Base de datos SQLite
@@ -129,7 +135,8 @@ marco/
 │   │       ├── 📂 login/           # 🔐 Login
 │   │       ├── 📂 register/        # 🔐 Registro
 │   │       ├── 📂 habitos/         # Gestión de hábitos
-│   │       ├── 📂 charts/          # Visualizaciones
+│   │       ├── 📂 analisis/        # 📊 Análisis y reportes (8 gráficos)
+│   │       ├── 📂 charts/          # Visualizaciones (legacy)
 │   │       ├── 📂 items/           # Items
 │   │       ├── 📂 progreso/        # Progreso detallado
 │   │       └── 📂 settings/        # Configuración de usuario
@@ -340,6 +347,45 @@ erDiagram
 | `POST` | `/api/registros/progreso/toggle/{id}` | Alternar completado de progreso |
 | `PUT` | `/api/registros/progreso/{id}` | Actualizar valor de progreso |
 
+### 📊 Análisis (Protegidos 🔒)
+| Método | Endpoint | Descripción |
+|--------|----------|-------------|
+| `GET` | `/api/analisis/rendimiento?fecha_inicio={YYYY-MM-DD}&fecha_fin={YYYY-MM-DD}` | Obtener rendimiento por día |
+| `GET` | `/api/analisis/cumplimiento?fecha_inicio={YYYY-MM-DD}&fecha_fin={YYYY-MM-DD}` | Obtener cumplimiento por hábito |
+
+#### Ejemplo de uso:
+```bash
+# Obtener rendimiento del mes actual
+GET /api/analisis/rendimiento?fecha_inicio=2025-12-01&fecha_fin=2025-12-31
+Authorization: Bearer <tu-token-jwt>
+
+# Respuesta:
+[
+  {
+    "fecha": "2025-12-11",
+    "habitos": 9,
+    "habitos_completados": 6
+  },
+  ...
+]
+
+# Obtener cumplimiento por hábito
+GET /api/analisis/cumplimiento?fecha_inicio=2025-12-01&fecha_fin=2025-12-31
+Authorization: Bearer <tu-token-jwt>
+
+# Respuesta:
+[
+  {
+    "fecha": "2025-12-06",
+    "nombre_habito": "Ejercicio",
+    "habitos_completados": 15,
+    "total_habitos": 20,
+    "color": "#e94560"
+  },
+  ...
+]
+```
+
 > **🔒 Nota:** Los endpoints marcados requieren autenticación con Bearer Token JWT
 
 ---
@@ -366,6 +412,26 @@ erDiagram
 
 ### Gestión de Hábitos
 *Crear, editar y eliminar hábitos con animaciones fluidas*
+
+### 📊 Análisis y Reportes (¡NUEVO!)
+*8 gráficos interactivos con Highcharts para visualizar tu rendimiento*
+
+**Gráficos disponibles:**
+1. **Rendimiento por Día** (Area Chart) - Evolución temporal de hábitos completados
+2. **Análisis Polar** (Polar Column) - Vista radial de completados vs totales
+3. **Distribución** (Pie Chart) - Proporción de cumplimiento por hábito
+4. **Progreso Diario** (Spline Chart) - Tendencia suave de tu progreso
+5. **Comparación** (Column Chart) - Totales vs completados por hábito
+6. **Promedio General** (Gauge Chart) - Velocímetro de cumplimiento global
+7. **Radar de Cumplimiento** (Spider Chart) - Comparativa radial de porcentajes
+8. **Top Hábitos** (Bar Chart) - Ranking por nivel de cumplimiento
+
+**Filtros disponibles:**
+- Este mes
+- Última semana
+- Último mes
+- Este año
+- Rango personalizado
 
 ### Configuración
 *Toggle para ver días futuros con auto-guardado*

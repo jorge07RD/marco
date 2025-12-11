@@ -143,6 +143,10 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 - `PUT /api/registros/progreso/{progreso_id}` - Actualiza progreso
 - `POST /api/registros/progreso/toggle/{progreso_id}` - Alterna completado
 
+### Análisis
+- `GET /api/analisis/rendimiento?fecha_inicio={fecha}&fecha_fin={fecha}` - Obtiene rendimiento por día del usuario
+- `GET /api/analisis/cumplimiento?fecha_inicio={fecha}&fecha_fin={fecha}` - Obtiene cumplimiento de hábitos del usuario
+
 ---
 
 ## 🚀 Integración con Frontend
