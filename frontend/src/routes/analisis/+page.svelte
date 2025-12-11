@@ -23,27 +23,27 @@
     color: string;
   }
 
-  // Estados reactivos
-  let loading = $state(true);
-  let error = $state<string | null>(null);
-  let showDateFilter = $state(false);
+  // Estados reactivos (elimina $state, usa variables normales)
+  let loading = true;
+  let error: string | null = null;
+  let showDateFilter = false;
 
   // Datos
-  let rendimientoDatos = $state<RendimientoDia[]>([]);
-  let cumplimientoDatos = $state<CumplimientoHabito[]>([]);
+  let rendimientoDatos: RendimientoDia[] = [];
+  let cumplimientoDatos: CumplimientoHabito[] = [];
 
   // Datos transformados
-  let progresoDias = $state<ProgresoDia[]>([]);
-  let habitosData = $state<HabitoData[]>([]);
-  let categorias = $state<string[]>([]);
+  let progresoDias: ProgresoDia[] = [];
+  let habitosData: HabitoData[] = [];
+  let categorias: string[] = [];
 
   // Fechas por defecto: mes actual
   const hoy = new Date();
   const primerDiaMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
   const ultimoDiaMes = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0);
 
-  let fechaInicio = $state(formatoFecha(primerDiaMes));
-  let fechaFin = $state(formatoFecha(ultimoDiaMes));
+  let fechaInicio = formatoFecha(primerDiaMes);
+  let fechaFin = formatoFecha(ultimoDiaMes);
 
   // Función auxiliar para formatear fechas
   function formatoFecha(fecha: Date): string {
@@ -133,8 +133,8 @@
       habitosData = getHabitosCompletados(cumplimiento);
       categorias = getCategoriasHabitos(cumplimiento);
 
-      // Renderizar gráficos después de cargar datos
-      setTimeout(() => renderizarGraficos(), 100);
+      // Renderizar gráficos después de cargar datos y asegurar que el DOM esté actualizado
+      setTimeout(() => renderizarGraficos(), 0);
 
     } catch (err) {
       error = err instanceof Error ? err.message : 'Error al cargar datos';
@@ -154,8 +154,29 @@
 
     // Importar Highcharts dinámicamente solo en el cliente
     const Highcharts = (await import('highcharts')).default;
+
+    // Para Highcharts v12+, HighchartsMore se exporta como default
     const HighchartsMore = (await import('highcharts/highcharts-more')).default;
-    HighchartsMore(Highcharts);
+
+    // Inicializar HighchartsMore
+    if (typeof HighchartsMore === 'function') {
+      HighchartsMore(Highcharts);
+    }
+
+    // Limpia los contenedores antes de renderizar para evitar superposición
+    [
+      'chart-rendimiento-area',
+      'chart-polar',
+      'chart-pie',
+      'chart-spline',
+      'chart-column',
+      'chart-gauge',
+      'chart-radar',
+      'chart-bar'
+    ].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.innerHTML = '';
+    });
 
     const COLORS = {
       bg_primary: '#0E0D0D',
@@ -434,6 +455,11 @@
         }]
       });
     }
+  }
+
+  // Vuelve a renderizar los gráficos cada vez que los datos cambian
+  $: if (!loading && habitosData.length > 0) {
+    setTimeout(() => renderizarGraficos(), 0);
   }
 
   onMount(() => {

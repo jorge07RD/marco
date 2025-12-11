@@ -47,14 +47,9 @@ async def get_rendimiento_por_dia(
             detail="Formato de fecha inválido. Use YYYY-MM-DD"
         )
 
-    # Query para obtener registros y progresos en el rango de fechas
-    query = (
-        select(
-            registros.fecha,
-            func.count(progreso_habitos.id).label('total_habitos'),
-            func.sum(progreso_habitos.completado).label('habitos_completados')
-        )
-        .join(progreso_habitos, progreso_habitos.registro_id == registros.id)
+    # Obtener todas las fechas del rango donde el usuario tiene registros
+    fechas_query = (
+        select(registros.fecha)
         .where(
             and_(
                 registros.usuario_id == current_user.id,
@@ -62,21 +57,47 @@ async def get_rendimiento_por_dia(
                 registros.fecha <= fecha_fin
             )
         )
-        .group_by(registros.fecha)
+        .distinct()
         .order_by(registros.fecha)
     )
+    fechas_result = await db.execute(fechas_query)
+    fechas = [row[0] for row in fechas_result.all()]
 
-    result = await db.execute(query)
-    rows = result.all()
+    # Obtener todos los hábitos activos del usuario
+    habitos_query = (
+        select(habitos.id)
+        .where(habitos.usuario_id == current_user.id)
+    )
+    habitos_result = await db.execute(habitos_query)
+    habitos_ids = [row[0] for row in habitos_result.all()]
 
-    return [
-        RendimientoDiaResponse(
-            fecha=row.fecha,
-            habitos=row.total_habitos or 0,
-            habitos_completados=int(row.habitos_completados or 0)
+    respuesta = []
+    for fecha in fechas:
+        # Contar hábitos completados ese día
+        completados_query = (
+            select(func.count())
+            .select_from(progreso_habitos)
+            .join(registros, registros.id == progreso_habitos.registro_id)
+            .where(
+                and_(
+                    registros.usuario_id == current_user.id,
+                    registros.fecha == fecha,
+                    progreso_habitos.completado == True
+                )
+            )
         )
-        for row in rows
-    ]
+        completados_result = await db.execute(completados_query)
+        habitos_completados = completados_result.scalar() or 0
+
+        respuesta.append(
+            RendimientoDiaResponse(
+                fecha=fecha,
+                habitos=len(habitos_ids),
+                habitos_completados=habitos_completados
+            )
+        )
+
+    return respuesta
 
 
 @router.get("/cumplimiento", response_model=List[CumplimientoHabitoResponse])
@@ -114,38 +135,74 @@ async def get_cumplimiento_habitos(
             detail="Formato de fecha inválido. Use YYYY-MM-DD"
         )
 
-    # Query para obtener el cumplimiento por hábito
-    query = (
-        select(
-            habitos.nombre.label('nombre_habito'),
-            habitos.color,
-            func.count(progreso_habitos.id).label('total_habitos'),
-            func.sum(progreso_habitos.completado).label('habitos_completados'),
-            func.min(registros.fecha).label('fecha')
-        )
-        .join(progreso_habitos, progreso_habitos.habito_id == habitos.id)
-        .join(registros, registros.id == progreso_habitos.registro_id)
+    # Subconsulta: todas las fechas del rango para el usuario
+    fechas_query = (
+        select(registros.fecha)
         .where(
             and_(
-                habitos.usuario_id == current_user.id,
+                registros.usuario_id == current_user.id,
                 registros.fecha >= fecha_inicio,
                 registros.fecha <= fecha_fin
             )
         )
-        .group_by(habitos.id, habitos.nombre, habitos.color)
-        .order_by(habitos.nombre)
+        .distinct()
     )
 
-    result = await db.execute(query)
-    rows = result.all()
+    fechas_result = await db.execute(fechas_query)
+    fechas = [row[0] for row in fechas_result.all()]
 
-    return [
-        CumplimientoHabitoResponse(
-            fecha=row.fecha,
-            nombre_habito=row.nombre_habito,
-            habitos_completados=int(row.habitos_completados or 0),
-            total_habitos=row.total_habitos or 0,
-            color=row.color
+    # Si no hay fechas, retorna vacío
+    if not fechas:
+        return []
+
+    # Consulta principal: para cada hábito, contar cuántos días debió hacerse y cuántos se completó
+    habitos_query = (
+        select(
+            habitos.id,
+            habitos.nombre.label('nombre_habito'),
+            habitos.color
         )
-        for row in rows
-    ]
+        .where(habitos.usuario_id == current_user.id)
+    )
+    habitos_result = await db.execute(habitos_query)
+    habitos_list = habitos_result.all()
+
+    respuesta = []
+    for habito in habitos_list:
+        # Para cada fecha, buscar si hay progreso
+        total_habitos = 0
+        habitos_completados = 0
+        fecha_primera = None
+
+        for fecha in fechas:
+            # Buscar progreso para este hábito y fecha
+            prog_query = (
+                select(progreso_habitos.completado)
+                .join(registros, registros.id == progreso_habitos.registro_id)
+                .where(
+                    and_(
+                        progreso_habitos.habito_id == habito.id,
+                        registros.fecha == fecha,
+                        registros.usuario_id == current_user.id
+                    )
+                )
+            )
+            prog_result = await db.execute(prog_query)
+            prog = prog_result.scalar()
+            total_habitos += 1
+            if prog:
+                habitos_completados += 1
+            if fecha_primera is None or fecha < fecha_primera:
+                fecha_primera = fecha
+
+        respuesta.append(
+            CumplimientoHabitoResponse(
+                fecha=fecha_primera,
+                nombre_habito=habito.nombre_habito,
+                habitos_completados=habitos_completados,
+                total_habitos=total_habitos,
+                color=habito.color
+            )
+        )
+
+    return respuesta
