@@ -15,7 +15,7 @@
   const navItems = [
     { href: '/', icon: '📊', label: 'Progreso' },
     { href: '/habitos', icon: '🎯', label: 'Hábitos' },
-    { href: '/charts', icon: '📈', label: 'Análisis' },
+    { href: '/analisis', icon: '📈', label: 'Análisis' },
     { href: '/settings', icon: '⚙️', label: 'Ajustes' },
   ];
 

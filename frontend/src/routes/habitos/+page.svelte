@@ -14,7 +14,7 @@
   let loading = $state(true);
   let error = $state<string | null>(null);
   let creandoRegistro = $state(false);
-  let registroExiste = $state(false);
+  let registroExiste = $state(true);
   let mensajeRegistro = $state<string | null>(null);
 
   // Modal states
@@ -32,13 +32,35 @@
   async function verificarRegistroHoy() {
     try {
       const fecha = getFechaISO();
-      await getRegistroPorFecha(fecha);
-      // Si no lanza error, el registro existe
-      registroExiste = true;
+      const registros = await getRegistroPorFecha(fecha);
+      const habitos = await getHabitos();
+      if (registros.progresos.length === habitos.length) {
+        registroExiste = true;
+      } else {
+        registroExiste = false;
+      }
+
     } catch {
       registroExiste = false;
     }
   }
+
+    async function getHabitosfaltanteshoy(): Promise<Habito[]> {
+      const fecha = getFechaISO();
+      const registros = await getRegistroPorFecha(fecha);
+      const habitos = await getHabitos();
+      let faltantes = [];
+      for (const habito of habitos) {
+        const registrado = registros.progresos.find(p => p.habito_id === habito.id);
+        const dias = JSON.parse(habito.dias);
+        const diaActual = getDiaActual();
+        if (!registrado && dias.includes(diaActual) && habito.activo) {
+          faltantes.push(habito);
+        }
+      }
+      return faltantes;
+    }
+    
 
   async function loadHabitos() {
     try {
@@ -198,37 +220,39 @@
 
   <!-- Botón para crear registro del día (solo si no existe registro) -->
   {#if !loading && habitos.length > 0 && !registroExiste}
-    {@const habitosHoy = getHabitosHoy()}
-    {#if habitosHoy.length > 0}
-      <div class="mb-6 p-4 bg-[#1B1B2F] border border-border rounded-lg">
-        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-          <div>
-            <p class="text-text_primary font-medium">
-              📅 Hoy tienes <span class="text-accent font-bold">{habitosHoy.length}</span> hábitos programados
-            </p>
-            <p class="text-text_secondary text-sm">
-              {habitosHoy.map(h => h.nombre).join(', ')}
-            </p>
+  
+    {#await getHabitosfaltanteshoy() then habitosFaltanteHoy}
+      {#if habitosFaltanteHoy.length > 0}
+        <div class="mb-6 p-4 bg-[#1B1B2F] border border-border rounded-lg">
+          <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div>
+              <p class="text-text_primary font-medium">
+                📅 Hoy tienes <span class="text-accent font-bold">{habitosFaltanteHoy.length}</span> hábitos programados
+              </p>
+              <p class="text-text_secondary text-sm">
+                {habitosFaltanteHoy.map(h => h.nombre).join(', ')}
+              </p>
+            </div>
+            <button
+              onclick={crearRegistroHoy}
+              disabled={creandoRegistro}
+              class="flex items-center gap-2 bg-success hover:bg-success/80 disabled:opacity-50 disabled:cursor-not-allowed text-bg_primary font-bold py-2 px-4 rounded-lg transition-colors whitespace-nowrap"
+            >
+              {#if creandoRegistro}
+                <span class="animate-spin">⏳</span> Creando...
+              {:else}
+                <span>📝</span> Crear registro de hoy
+              {/if}
+            </button>
           </div>
-          <button
-            onclick={crearRegistroHoy}
-            disabled={creandoRegistro}
-            class="flex items-center gap-2 bg-success hover:bg-success/80 disabled:opacity-50 disabled:cursor-not-allowed text-bg_primary font-bold py-2 px-4 rounded-lg transition-colors whitespace-nowrap"
-          >
-            {#if creandoRegistro}
-              <span class="animate-spin">⏳</span> Creando...
-            {:else}
-              <span>📝</span> Crear registro de hoy
-            {/if}
-          </button>
+          {#if mensajeRegistro}
+            <p class="mt-3 text-sm {mensajeRegistro.startsWith('✅') ? 'text-success' : 'text-accent'}">
+              {mensajeRegistro}
+            </p>
+          {/if}
         </div>
-        {#if mensajeRegistro}
-          <p class="mt-3 text-sm {mensajeRegistro.startsWith('✅') ? 'text-success' : 'text-accent'}">
-            {mensajeRegistro}
-          </p>
-        {/if}
-      </div>
-    {/if}
+      {/if}
+    {/await}
   {/if}
 
   {#if loading}

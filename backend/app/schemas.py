@@ -264,3 +264,26 @@ class TokenResponse(BaseModel):
                 }
             }
         }
+
+
+# ==================== Analytics Schemas ====================
+class RendimientoDiaResponse(BaseModel):
+    """Esquema para rendimiento por día."""
+    fecha: str
+    habitos: int
+    habitos_completados: int
+
+    class Config:
+        from_attributes = True
+
+
+class CumplimientoHabitoResponse(BaseModel):
+    """Esquema para cumplimiento de hábitos por categoría."""
+    fecha: str
+    nombre_habito: str
+    habitos_completados: int
+    total_habitos: int
+    color: str
+
+    class Config:
+        from_attributes = True

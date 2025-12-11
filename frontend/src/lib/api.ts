@@ -392,3 +392,63 @@ export async function updateUsuario(data: UsuarioUpdate): Promise<Usuario> {
 
   return response.json();
 }
+
+// ==================== Analytics API ====================
+
+/**
+ * Tipo para rendimiento por día
+ */
+export interface RendimientoDia {
+  fecha: string;
+  habitos: number;
+  habitos_completados: number;
+}
+
+/**
+ * Tipo para cumplimiento de hábitos
+ */
+export interface CumplimientoHabito {
+  fecha: string;
+  nombre_habito: string;
+  habitos_completados: number;
+  total_habitos: number;
+  color: string;
+}
+
+/**
+ * Obtiene el rendimiento de hábitos por día en un rango de fechas
+ */
+export async function getRendimientoPorDia(
+  fechaInicio: string,
+  fechaFin: string
+): Promise<RendimientoDia[]> {
+  const response = await fetchConAuth(
+    `/analisis/rendimiento?fecha_inicio=${fechaInicio}&fecha_fin=${fechaFin}`
+  );
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail || 'Error al obtener rendimiento por día');
+  }
+
+  return response.json();
+}
+
+/**
+ * Obtiene el cumplimiento de cada hábito en un rango de fechas
+ */
+export async function getCumplimientoHabitos(
+  fechaInicio: string,
+  fechaFin: string
+): Promise<CumplimientoHabito[]> {
+  const response = await fetchConAuth(
+    `/analisis/cumplimiento?fecha_inicio=${fechaInicio}&fecha_fin=${fechaFin}`
+  );
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail || 'Error al obtener cumplimiento de hábitos');
+  }
+
+  return response.json();
+}
