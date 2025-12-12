@@ -99,3 +99,5 @@ logs/
 .mypy_cache/
 .ruff_cache/
 terraform.tfstate
+main.tf
+terraform.tfstate
