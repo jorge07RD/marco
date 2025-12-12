@@ -1,0 +1,21 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Instala uv (gestor de paquetes rápido)
+RUN pip install --no-cache-dir uv
+
+# Copia archivos de dependencias primero
+COPY backend/pyproject.toml backend/pyproject.lock* ./
+
+# Instala dependencias en el sistema (no en venv)
+RUN if [ -f pyproject.lock ]; then uv pip install --system -r pyproject.lock; else uv pip install --system -r pyproject.toml; fi
+# RUN uv add bcrypt
+# Copia el resto del código
+COPY backend/ .
+
+ENV PYTHONUNBUFFERED=1
+
+EXPOSE 8000
+
+CMD ["uv", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

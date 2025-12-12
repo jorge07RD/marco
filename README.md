@@ -157,8 +157,8 @@ marco/
 
 - **Python 3.12+** - [Descargar](https://python.org)
 - **Node.js 18+** - [Descargar](https://nodejs.org)
-- **UV** (Gestor de paquetes Python) - [Instalar](https://github.com/astral-sh/uv)
-- **pnpm** (opcional, recomendado) - [Instalar](https://pnpm.io)
+- **UV** (Gestor de paquetes Python, solo para backend) - [Instalar](https://github.com/astral-sh/uv)
+- **pnpm** (opcional, recomendado para frontend) - [Instalar](https://pnpm.io)
 
 ### 🚀 Inicio Rápido
 
@@ -172,7 +172,7 @@ cd marco
 ```bash
 cd backend
 
-# Instalar dependencias con UV
+# Instalar dependencias con UV (crea el venv automáticamente)
 uv sync
 
 # Iniciar el servidor de desarrollo
@@ -188,12 +188,12 @@ El backend estará disponible en: `http://127.0.0.1:8000`
 cd frontend
 
 # Instalar dependencias
-pnpm install
-# o con npm: npm install
+npm install
+# o con pnpm: pnpm install
 
 # Iniciar el servidor de desarrollo
-pnpm dev
-# o con npm: npm run dev
+npm run dev
+# o con pnpm: pnpm dev
 ```
 
 El frontend estará disponible en: `http://localhost:5173`
@@ -469,5 +469,3 @@ Este proyecto está bajo la Licencia MIT. Ver el archivo `LICENSE` para más det
 **⭐ Si te gusta este proyecto, no olvides darle una estrella ⭐**
 
 Hecho con ❤️ y ☕
-
-</div>

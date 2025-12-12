@@ -452,3 +452,82 @@ export async function getCumplimientoHabitos(
 
   return response.json();
 }
+
+// ==================== Charts / Series (stubs) ====================
+
+export interface ChartPoint {
+  label: string;
+  value: number;
+  series: string;
+}
+
+export interface ChartSeries {
+  categories: string[];
+  data: number[];
+}
+
+export interface ChartData {
+  series: string[];
+}
+
+// Dev-friendly stub implementations to satisfy imports during build.
+// These return empty data and no-op for create/delete. Replace with real API calls if backend endpoints exist.
+
+export async function getSeries(): Promise<string[]> {
+  return Promise.resolve([]);
+}
+
+export async function getSeriesData(name: string): Promise<ChartSeries> {
+  return Promise.resolve({ categories: [], data: [] });
+}
+
+export async function getChartData(name: string): Promise<ChartData> {
+  const s = await getSeries();
+  return Promise.resolve({ series: s });
+}
+
+export async function createBulkChartData(points: ChartPoint[]): Promise<void> {
+  return Promise.resolve();
+}
+
+export async function deleteSeries(name: string): Promise<void> {
+  return Promise.resolve();
+}
+
+// ==================== Items API (stubs) ====================
+
+export interface Item {
+  id: number;
+  name: string;
+  description?: string;
+  value: number;
+  category?: string;
+  created_at: string;
+}
+
+export interface ItemCreate {
+  name: string;
+  description?: string;
+  value: number;
+  category?: string;
+}
+
+export async function getItems(): Promise<Item[]> {
+  return Promise.resolve([]);
+}
+
+export async function createItem(data: ItemCreate): Promise<Item> {
+  return Promise.resolve({ id: 0, name: data.name, description: data.description ?? '', value: data.value, category: data.category ?? '', created_at: new Date().toISOString() });
+}
+
+export async function deleteItem(id: number): Promise<void> {
+  return Promise.resolve();
+}
+
+// ==================== Convenience wrappers ====================
+
+export async function getHabitosByUsuario(usuarioId: number): Promise<Habito[]> {
+  // Backend endpoints likely return habits for the authenticated user; this stub returns all habits.
+  return getHabitos();
+}
+

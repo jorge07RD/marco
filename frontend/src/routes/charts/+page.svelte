@@ -3,8 +3,6 @@
   import { Chart } from '$lib';
   import {
     getChartData,
-    getSeries,
-    getSeriesData,
     createBulkChartData,
     deleteSeries,
     type ChartData,

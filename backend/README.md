@@ -1,11 +1,11 @@
 # Backend API
 
-API REST construida con FastAPI, SQLite asíncrono, Pydantic y UV para gestión de hábitos y análisis de progreso.
+API REST construida con FastAPI, SQLite asíncrono, Pydantic y **UV** para gestión de hábitos y análisis de progreso.
 
 ## Requisitos
 
 - Python 3.11+
-- UV (gestor de paquetes)
+- [UV](https://github.com/astral-sh/uv) (gestor de paquetes Python ultrarrápido)
 
 ## Instalación
 
@@ -13,7 +13,7 @@ API REST construida con FastAPI, SQLite asíncrono, Pydantic y UV para gestión 
 # Instalar UV si no lo tienes
 curl -LsSf https://astral.sh/uv/install.sh | sh
 
-# Crear entorno virtual e instalar dependencias
+# Instalar dependencias (esto crea el venv automáticamente)
 uv sync
 
 # Copiar archivo de configuración

@@ -5,7 +5,7 @@ Aplicación web construida con SvelteKit 5, Highcharts 12 y Tailwind CSS para el
 ## Requisitos
 
 - Node.js 18+
-- npm o pnpm
+- npm
 
 ## Instalación
 
