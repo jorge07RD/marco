@@ -300,13 +300,13 @@
             <!-- estado del hábito -->
             {#if habito.activo}
               <div
-                class="ml-auto grid w-auto text-[#00ff88] border border-[#00ff88] justify-center text-xs items-center p-2 rounded-xs bg-[#121127]"
+                class="ml-auto grid w-auto text-[#00ff88] border border-[#00ff88] text-nowrap justify-center text-xs items-center p-2 rounded-xs bg-[#121127]"
               >
                 ● ON
               </div>
             {:else}
               <div
-                class="ml-auto grid w-auto text-[#ff4d4d] border border-[#ff4d4d] justify-center text-xs items-center p-2 rounded-xs bg-[#121127]"
+                class="ml-auto grid w-auto text-[#ff4d4d] border border-[#ff4d4d] text-nowrap justify-center text-xs items-center p-2 rounded-xs bg-[#121127]"
               >
                 ● OFF
               </div>
