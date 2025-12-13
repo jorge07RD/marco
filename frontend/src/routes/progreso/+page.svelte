@@ -93,14 +93,14 @@
   {#if !loading && habitos.length > 0}
     {@const habitosHoy = habitos.filter(h => habitoActivoHoy(h))}
     {@const completados = habitosHoy.filter(h => estaCompletado(h.id, h.meta_diaria)).length}
-    
-    <div class="bg-bg_secondary border border-border rounded-lg p-4 mb-6">
+
+    <div class="bg-bg_secondary border border-border rounded-lg p-4 mb-6 slide-in-blurred-top">
       <div class="flex items-center justify-between mb-3">
         <span class="text-text_secondary">Progreso del día</span>
         <span class="text-text_primary font-bold">{completados}/{habitosHoy.length}</span>
       </div>
       <div class="w-full bg-bg_input rounded-full h-3">
-        <div 
+        <div
           class="bg-gradient-to-r from-accent to-success h-3 rounded-full transition-all duration-500"
           style="width: {habitosHoy.length > 0 ? (completados / habitosHoy.length) * 100 : 0}%"
         ></div>
@@ -133,13 +133,14 @@
   {:else}
     <!-- Lista de hábitos para hoy -->
     <div class="space-y-4">
-      {#each habitos.filter(h => habitoActivoHoy(h)) as habito (habito.id)}
+      {#each habitos.filter(h => habitoActivoHoy(h)) as habito, i (habito.id)}
         {@const progreso = progresoHoy[habito.id] || 0}
         {@const porcentaje = getProgresoPorcentaje(habito.id, habito.meta_diaria)}
         {@const completado = estaCompletado(habito.id, habito.meta_diaria)}
-        
-        <div 
-          class="bg-bg_secondary border rounded-lg p-4 transition-all   {completado ? 'border-success/50 bg-success/5' : 'border-border'}"
+
+        <div
+          class="bg-bg_secondary border rounded-lg p-4 transition-all slide-in-blurred-right {completado ? 'border-success/50 bg-success/5' : 'border-border'}"
+          style="animation-delay: {0.2 + i * 0.1}s;"
         >
           <div class="flex items-center   gap-4">
             <!-- Indicador de color -->

@@ -601,8 +601,11 @@
     <div class="max-w-7xl mx-auto space-y-6">
       <!-- Tarjetas resumen -->
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {#each habitosData as habito}
-          <div class="bg-[#1a1a1a] border border-[#533483] rounded-lg p-4">
+        {#each habitosData as habito, i}
+          <div
+            class="bg-[#1a1a1a] border border-[#533483] rounded-lg p-4 slide-in-blurred-right"
+            style="animation-delay: {i * 0.1}s;"
+          >
             <h3 class="font-bold text-[#e94560] mb-2 truncate">{habito.nombre}</h3>
             <div class="h-1 rounded-full mb-2" style="background-color: {habito.color};"></div>
             <p class="text-sm text-[#A0A0A0]">Completados: {habito.completados} / {habito.total}</p>
@@ -618,40 +621,64 @@
       <div class="space-y-6">
         <!-- Fila 1: Rendimiento Area + Polar -->
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <div class="lg:col-span-2 bg-[#1a1a1a] border border-[#533483] rounded-lg p-4 h-96">
+          <div
+            class="lg:col-span-2 bg-[#1a1a1a] border border-[#533483] rounded-lg p-4 h-96 slide-in-blurred-bottom"
+            style="animation-delay: 0.3s;"
+          >
             <div id="chart-rendimiento-area" class="w-full h-full"></div>
           </div>
-          <div class="bg-[#1a1a1a] border border-[#533483] rounded-lg p-4 h-96">
+          <div
+            class="bg-[#1a1a1a] border border-[#533483] rounded-lg p-4 h-96 slide-in-blurred-bottom"
+            style="animation-delay: 0.4s;"
+          >
             <div id="chart-polar" class="w-full h-full"></div>
           </div>
         </div>
 
         <!-- Fila 2: Pie + Spline -->
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <div class="bg-[#1a1a1a] border border-[#533483] rounded-lg p-4 h-96">
+          <div
+            class="bg-[#1a1a1a] border border-[#533483] rounded-lg p-4 h-96 slide-in-blurred-bottom"
+            style="animation-delay: 0.5s;"
+          >
             <div id="chart-pie" class="w-full h-full"></div>
           </div>
-          <div class="lg:col-span-2 bg-[#1a1a1a] border border-[#533483] rounded-lg p-4 h-96">
+          <div
+            class="lg:col-span-2 bg-[#1a1a1a] border border-[#533483] rounded-lg p-4 h-96 slide-in-blurred-bottom"
+            style="animation-delay: 0.6s;"
+          >
             <div id="chart-spline" class="w-full h-full"></div>
           </div>
         </div>
 
         <!-- Fila 3: Column + Gauge -->
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <div class="lg:col-span-2 bg-[#1a1a1a] border border-[#533483] rounded-lg p-4 h-96">
+          <div
+            class="lg:col-span-2 bg-[#1a1a1a] border border-[#533483] rounded-lg p-4 h-96 slide-in-blurred-bottom"
+            style="animation-delay: 0.7s;"
+          >
             <div id="chart-column" class="w-full h-full"></div>
           </div>
-          <div class="bg-[#1a1a1a] border border-[#533483] rounded-lg p-4 h-96">
+          <div
+            class="bg-[#1a1a1a] border border-[#533483] rounded-lg p-4 h-96 slide-in-blurred-bottom"
+            style="animation-delay: 0.8s;"
+          >
             <div id="chart-gauge" class="w-full h-full"></div>
           </div>
         </div>
 
         <!-- Fila 4: Radar + Bar -->
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <div class="bg-[#1a1a1a] border border-[#533483] rounded-lg p-4 h-96">
+          <div
+            class="bg-[#1a1a1a] border border-[#533483] rounded-lg p-4 h-96 slide-in-blurred-bottom"
+            style="animation-delay: 0.9s;"
+          >
             <div id="chart-radar" class="w-full h-full"></div>
           </div>
-          <div class="lg:col-span-2 bg-[#1a1a1a] border border-[#533483] rounded-lg p-4 h-96">
+          <div
+            class="lg:col-span-2 bg-[#1a1a1a] border border-[#533483] rounded-lg p-4 h-96 slide-in-blurred-bottom"
+            style="animation-delay: 1.0s;"
+          >
             <div id="chart-bar" class="w-full h-full"></div>
           </div>
         </div>
