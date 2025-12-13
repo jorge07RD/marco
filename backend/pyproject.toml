@@ -17,6 +17,7 @@ dependencies = [
     "asyncpg>=0.31.0",
 ]
 
+
 [project.optional-dependencies]
 dev = [
     "pytest>=8.3.0",
