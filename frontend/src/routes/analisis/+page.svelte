@@ -27,6 +27,7 @@
   let loading = true;
   let error: string | null = null;
   let showDateFilter = false;
+  let isClosing = false;
 
   // Datos
   let rendimientoDatos: RendimientoDia[] = [];
@@ -143,9 +144,22 @@
     }
   }
 
+  function handleCloseModal() {
+    isClosing = true;
+    // Esperar a que termine la animación slide-out-blurred-top (0.45s)
+    setTimeout(() => {
+      showDateFilter = false;
+      isClosing = false;
+    }, 450);
+  }
+
   function aplicarFiltro() {
-    showDateFilter = false;
-    cargarDatos();
+    isClosing = true;
+    setTimeout(() => {
+      showDateFilter = false;
+      isClosing = false;
+      cargarDatos();
+    }, 450);
   }
 
   // Renderizar gráficos con Highcharts
@@ -473,11 +487,11 @@
     <div class="flex justify-between items-center">
       <h1 class="text-3xl font-bold text-[#e94560]">Análisis de Hábitos</h1>
 
-      <!-- Botón filtros -->
+      <!-- Botón filtros (desktop) -->
       <button
         onclick={() => showDateFilter = !showDateFilter}
-        class="bg-[#533483] hover:bg-[#7047a8] text-white px-4 py-2 rounded-md
-               transition-colors flex items-center gap-2"
+        class="hidden md:flex bg-[#533483] hover:bg-[#7047a8] text-white px-4 py-2 rounded-md
+               transition-colors items-center gap-2"
       >
         <span>📅</span>
         <span>Filtrar Fechas</span>
@@ -492,83 +506,104 @@
 
   <!-- Modal de filtros de fecha -->
   {#if showDateFilter}
-    <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div class="bg-[#1a1a1a] border border-[#533483] rounded-lg p-6 max-w-md w-full">
-        <div class="flex justify-between items-center mb-4">
-          <h3 class="text-xl font-bold text-[#e94560]">📅 Filtrar por Fecha</h3>
+    <!-- Overlay -->
+    <div
+      class="fixed inset-0 backdrop-blur-md z-50 flex items-center justify-center p-4 {isClosing ? 'backdrop-blur-0' : ''} transition-all duration-500"
+      onclick={handleCloseModal}
+      onkeydown={(e) => e.key === 'Escape' && handleCloseModal()}
+      role="button"
+      tabindex="0"
+    >
+      <!-- Modal -->
+      <div
+        class="bg-bg_secondary border border-border rounded-lg w-full max-w-md max-h-[90vh] overflow-y-auto p-6 {isClosing ? 'slide-out-blurred-top' : 'bounce-in-top'}"
+        onclick={(e) => e.stopPropagation()}
+        onkeydown={(e) => e.stopPropagation()}
+        role="dialog"
+        tabindex="-1"
+      >
+        <div class="flex justify-between items-center mb-6">
+          <h3 class="text-xl font-bold text-text_primary">📅 Filtrar por Fecha</h3>
           <button
-            onclick={() => showDateFilter = false}
-            class="text-[#A0A0A0] hover:text-white"
+            onclick={handleCloseModal}
+            class="text-text_secondary hover:text-accent transition-colors text-2xl"
           >
-            ✕
+            ×
           </button>
         </div>
 
         <div class="space-y-4">
           <!-- Fecha Inicio -->
           <div>
-            <label class="block text-[#A0A0A0] text-sm mb-1">Fecha Inicio</label>
+            <label class="block text-text_secondary text-sm mb-1">Fecha Inicio</label>
             <input
               type="date"
               bind:value={fechaInicio}
-              class="w-full bg-[#1a1a1a] border border-[#533483] text-white px-4 py-2
-                     rounded-md focus:outline-none focus:ring-2 focus:ring-[#e94560]"
+              class="w-full bg-bg_input border border-border rounded px-3 py-2 text-text_primary focus:border-accent focus:outline-none"
             />
           </div>
 
           <!-- Fecha Fin -->
           <div>
-            <label class="block text-[#A0A0A0] text-sm mb-1">Fecha Fin</label>
+            <label class="block text-text_secondary text-sm mb-1">Fecha Fin</label>
             <input
               type="date"
               bind:value={fechaFin}
-              class="w-full bg-[#1a1a1a] border border-[#533483] text-white px-4 py-2
-                     rounded-md focus:outline-none focus:ring-2 focus:ring-[#e94560]"
+              class="w-full bg-bg_input border border-border rounded px-3 py-2 text-text_primary focus:border-accent focus:outline-none"
             />
           </div>
 
-          <div class="border-t border-[#533483] pt-4">
-            <p class="text-[#A0A0A0] text-sm mb-2">Acceso Rápido</p>
+          <div class="border-t border-border pt-4">
+            <p class="text-text_secondary text-sm mb-2">Acceso Rápido</p>
             <div class="grid grid-cols-2 gap-2">
               <button
+                type="button"
                 onclick={setEsteMes}
-                class="bg-[#1a1a1a] border border-[#533483] text-white px-3 py-2
-                       rounded-md hover:bg-[#533483]/20 transition-colors text-sm"
+                class="bg-bg_input border border-border text-text_primary px-3 py-2 rounded hover:border-accent transition-colors text-sm"
               >
                 Este mes
               </button>
               <button
+                type="button"
                 onclick={setUltimaSemana}
-                class="bg-[#1a1a1a] border border-[#533483] text-white px-3 py-2
-                       rounded-md hover:bg-[#533483]/20 transition-colors text-sm"
+                class="bg-bg_input border border-border text-text_primary px-3 py-2 rounded hover:border-accent transition-colors text-sm"
               >
                 Última semana
               </button>
               <button
+                type="button"
                 onclick={setUltimoMes}
-                class="bg-[#1a1a1a] border border-[#533483] text-white px-3 py-2
-                       rounded-md hover:bg-[#533483]/20 transition-colors text-sm"
+                class="bg-bg_input border border-border text-text_primary px-3 py-2 rounded hover:border-accent transition-colors text-sm"
               >
                 Último mes
               </button>
               <button
+                type="button"
                 onclick={setEsteAnio}
-                class="bg-[#1a1a1a] border border-[#533483] text-white px-3 py-2
-                       rounded-md hover:bg-[#533483]/20 transition-colors text-sm"
+                class="bg-bg_input border border-border text-text_primary px-3 py-2 rounded hover:border-accent transition-colors text-sm"
               >
                 Este año
               </button>
             </div>
           </div>
 
-          <!-- Botón aplicar -->
-          <button
-            onclick={aplicarFiltro}
-            class="w-full bg-[#00ff88] text-[#0E0D0D] px-4 py-2 rounded-md
-                   hover:bg-[#00cc6a] transition-colors font-medium"
-          >
-            ✓ Aplicar Filtro
-          </button>
+          <!-- Botones -->
+          <div class="flex gap-3 pt-4">
+            <button
+              type="button"
+              onclick={handleCloseModal}
+              class="flex-1 py-2 px-4 rounded border border-border text-text_secondary hover:border-text_secondary transition-colors"
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              onclick={aplicarFiltro}
+              class="flex-1 py-2 px-4 rounded bg-success text-bg_primary font-bold hover:bg-success/80 transition-colors"
+            >
+              ✓ Aplicar
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -685,4 +720,12 @@
       </div>
     </div>
   {/if}
+
+  <!-- Floating Action Button (móvil) -->
+  <button
+    onclick={() => showDateFilter = !showDateFilter}
+    class="md:hidden fixed bottom-20 right-6 w-14 h-14 bg-[#533483] hover:bg-[#7047a8] text-white text-2xl rounded-full shadow-lg shadow-[#533483]/30 flex items-center justify-center transition-all hover:scale-110 z-40"
+  >
+    📅
+  </button>
 </div>
