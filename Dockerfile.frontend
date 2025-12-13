@@ -2,11 +2,16 @@ FROM node:18-alpine
 
 WORKDIR /app
 
+# Argumento de build para la URL del backend
+ARG VITE_API_URL=https://marco-242884135694.southamerica-east1.run.app/api
+
 COPY frontend/package.json frontend/package-lock.json* ./
 RUN npm install
 
 COPY frontend/ .
 
+# Pasar la variable de entorno durante el build
+ENV VITE_API_URL=${VITE_API_URL}
 RUN npm run build
 
 EXPOSE 5173
