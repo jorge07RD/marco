@@ -156,6 +156,14 @@ export interface RegistroConProgresos extends Registro {
   progresos: ProgresoHabito[];
 }
 
+export interface ProgresoDiaCalendario {
+  fecha: string;
+  total_habitos: number;
+  habitos_completados: number;
+  porcentaje: number;
+  tiene_registro: boolean;
+}
+
 // ==================== Auth API ====================
 
 /**
@@ -369,6 +377,20 @@ export async function updateProgreso(
 
   if (!response.ok) {
     throw new Error('Error al actualizar progreso');
+  }
+
+  return response.json();
+}
+
+/**
+ * Obtiene el progreso de todos los días de un mes para el calendario
+ */
+export async function getProgresoMes(year: number, month: number): Promise<ProgresoDiaCalendario[]> {
+  const response = await fetchConAuth(`/registros/calendario/${year}/${month}`);
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail || 'Error al obtener progreso del mes');
   }
 
   return response.json();

@@ -1,5 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { page } from '$app/stores';
+  import { goto } from '$app/navigation';
   import {
     getHabitos,
     obtenerUsuarioActual,
@@ -19,7 +21,33 @@
   let error = $state<string | null>(null);
 
   // Fecha seleccionada - iniciar con hoy
-  let fechaActual = $state(new Date());
+  const hoy = new Date();
+  hoy.setHours(12, 0, 0, 0);
+  let fechaActual = $state(hoy);
+
+  // Efecto para actualizar la fecha cuando cambie el parámetro en la URL
+  $effect(() => {
+    // Usar $page.url.searchParams que es reactivo en SvelteKit
+    const fechaParam = $page.url.searchParams.get('fecha');
+
+    if (fechaParam) {
+      // Parsear la fecha en formato YYYY-MM-DD
+      const [year, month, day] = fechaParam.split('-').map(Number);
+      const nuevaFecha = new Date(year, month - 1, day, 12, 0, 0, 0);
+
+      // Solo actualizar si la fecha es diferente
+      if (nuevaFecha.toDateString() !== fechaActual.toDateString()) {
+        fechaActual = nuevaFecha;
+      }
+    } else {
+      // Si no hay parámetro de fecha, volver a hoy
+      const ahora = new Date();
+      ahora.setHours(12, 0, 0, 0);
+      if (ahora.toDateString() !== fechaActual.toDateString()) {
+        fechaActual = ahora;
+      }
+    }
+  });
 
   // Estado para animaciones y notificaciones
   let sacudir = $state(false);
@@ -35,8 +63,21 @@
     setTimeout(() => notificacion = null, 3000);
   }
 
+  // Variable para rastrear si ya se cargó inicialmente
+  let inicializado = $state(false);
+
   onMount(async () => {
     await cargarDatos();
+    inicializado = true;
+  });
+
+  // Efecto para recargar el registro cuando cambie fechaActual
+  $effect(() => {
+    if (inicializado) {
+      // Solo recargar si ya se inicializó (evita doble carga en mount)
+      const _ = fechaActual; // Dependencia reactiva
+      cargarRegistro();
+    }
   });
 
   async function cargarDatos() {
@@ -75,37 +116,43 @@
     }
   }
 
-  async function cambiarDia(delta: number) {
+  function cambiarDia(delta: number) {
     const nueva = new Date(fechaActual);
     nueva.setDate(nueva.getDate() + delta);
-    
+    nueva.setHours(12, 0, 0, 0); // Normalizar a mediodía
+
     // Verificar si es futuro y el usuario no puede ver futuro
     const hoy = new Date();
-    hoy.setHours(0, 0, 0, 0);
-    nueva.setHours(0, 0, 0, 0);
-    
+    hoy.setHours(12, 0, 0, 0);
+
     if (nueva > hoy && !usuario?.ver_futuro) {
       mostrarNotificacion("🔮 No puedes ver el futuro. Actívalo en Ajustes.");
       return;
     }
-    
-    error = null;
-    fechaActual = nueva;
-    loading = true;
-    await cargarRegistro();
-    loading = false;
+
+    // Formatear fecha como YYYY-MM-DD
+    const year = nueva.getFullYear();
+    const month = String(nueva.getMonth() + 1).padStart(2, '0');
+    const day = String(nueva.getDate()).padStart(2, '0');
+    const fechaStr = `${year}-${month}-${day}`;
+
+    // Navegar a la nueva fecha (el $effect se encargará de actualizar fechaActual)
+    goto(`/?fecha=${fechaStr}`);
   }
 
   function esHoy(): boolean {
     const hoy = new Date();
-    return fechaActual.toDateString() === hoy.toDateString();
+    hoy.setHours(12, 0, 0, 0);
+    const fecha = new Date(fechaActual);
+    fecha.setHours(12, 0, 0, 0);
+    return fecha.toDateString() === hoy.toDateString();
   }
 
   function esFuturo(): boolean {
     const hoy = new Date();
-    hoy.setHours(0, 0, 0, 0);
+    hoy.setHours(12, 0, 0, 0);
     const fecha = new Date(fechaActual);
-    fecha.setHours(0, 0, 0, 0);
+    fecha.setHours(12, 0, 0, 0);
     return fecha > hoy;
   }
 

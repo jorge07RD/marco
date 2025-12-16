@@ -8,7 +8,8 @@ from app.database import get_db
 from app.models import registros, progreso_habitos, usuario, habitos
 from app.schemas import (
     RegistroCreate, RegistroUpdate, RegistroResponse, RegistroConProgresos,
-    ProgresoHabitoCreate, ProgresoHabitoUpdate, ProgresoHabitoResponse
+    ProgresoHabitoCreate, ProgresoHabitoUpdate, ProgresoHabitoResponse,
+    ProgresoDiaCalendario
 )
 from app.security import get_current_user
 
@@ -211,6 +212,123 @@ async def delete_registro(registro_id: int, db: AsyncSession = Depends(get_db)):
     db_registro = result.scalar_one_or_none()
     if not db_registro:
         raise HTTPException(status_code=404, detail="Registro no encontrado")
-    
+
     await db.delete(db_registro)
     await db.commit()
+
+
+@router.get("/calendario/{year}/{month}", response_model=List[ProgresoDiaCalendario])
+async def get_progreso_mes(
+    year: int,
+    month: int,
+    current_user: usuario = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Obtiene el progreso de cada día del mes para mostrar en el calendario.
+
+    Args:
+        year: Año del calendario
+        month: Mes del calendario (1-12)
+        current_user: Usuario autenticado
+        db: Sesión de base de datos
+
+    Returns:
+        Lista con progreso diario del mes
+    """
+    import calendar
+    from datetime import timedelta
+
+    # Validar mes
+    if month < 1 or month > 12:
+        raise HTTPException(status_code=400, detail="Mes inválido. Debe estar entre 1 y 12")
+
+    # Calcular primer y último día del mes
+    primer_dia = date(year, month, 1)
+    _, ultimo_dia_mes = calendar.monthrange(year, month)
+    ultimo_dia = date(year, month, ultimo_dia_mes)
+
+    # Obtener hábitos activos del usuario
+    habitos_result = await db.execute(
+        select(habitos).where(
+            and_(habitos.usuario_id == current_user.id, habitos.activo == 1)
+        )
+    )
+    habitos_usuario = habitos_result.scalars().all()
+
+    # Obtener todos los registros del mes
+    registros_result = await db.execute(
+        select(registros).where(
+            and_(
+                registros.usuario_id == current_user.id,
+                registros.fecha >= primer_dia.strftime("%Y-%m-%d"),
+                registros.fecha <= ultimo_dia.strftime("%Y-%m-%d")
+            )
+        )
+    )
+    registros_mes = {r.fecha: r for r in registros_result.scalars().all()}
+
+    # Obtener todos los progresos de esos registros
+    if registros_mes:
+        registro_ids = [r.id for r in registros_mes.values()]
+        progresos_result = await db.execute(
+            select(progreso_habitos).where(progreso_habitos.registro_id.in_(registro_ids))
+        )
+        progresos_list = progresos_result.scalars().all()
+
+        # Agrupar progresos por registro_id
+        progresos_por_registro = {}
+        for p in progresos_list:
+            if p.registro_id not in progresos_por_registro:
+                progresos_por_registro[p.registro_id] = []
+            progresos_por_registro[p.registro_id].append(p)
+    else:
+        progresos_por_registro = {}
+
+    # Generar respuesta para cada día del mes
+    dias_semana = ['D', 'L', 'M', 'X', 'J', 'V', 'S']
+    resultado = []
+
+    fecha_actual = primer_dia
+    while fecha_actual <= ultimo_dia:
+        fecha_str = fecha_actual.strftime("%Y-%m-%d")
+
+        # Calcular día de la semana
+        dia_letra = dias_semana[fecha_actual.weekday() + 1] if fecha_actual.weekday() < 6 else dias_semana[0]
+
+        # Contar hábitos programados para este día
+        habitos_del_dia = []
+        for habito in habitos_usuario:
+            try:
+                dias_habito = eval(habito.dias)  # Parse JSON string
+                if dia_letra in dias_habito:
+                    habitos_del_dia.append(habito.id)
+            except:
+                pass
+
+        total_habitos = len(habitos_del_dia)
+
+        # Verificar si hay registro para este día
+        registro = registros_mes.get(fecha_str)
+        tiene_registro = registro is not None
+
+        # Contar hábitos completados
+        habitos_completados = 0
+        if registro and registro.id in progresos_por_registro:
+            progresos = progresos_por_registro[registro.id]
+            habitos_completados = sum(1 for p in progresos if p.completado)
+
+        # Calcular porcentaje
+        porcentaje = (habitos_completados / total_habitos * 100) if total_habitos > 0 else 0
+
+        resultado.append(ProgresoDiaCalendario(
+            fecha=fecha_str,
+            total_habitos=total_habitos,
+            habitos_completados=habitos_completados,
+            porcentaje=round(porcentaje, 1),
+            tiene_registro=tiene_registro
+        ))
+
+        fecha_actual += timedelta(days=1)
+
+    return resultado
