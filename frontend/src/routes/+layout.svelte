@@ -15,6 +15,7 @@
   const navItems = [
     { href: '/', icon: '📊', label: 'Progreso' },
     { href: '/habitos', icon: '🎯', label: 'Hábitos' },
+    { href: '/calendario', icon: '📅', label: 'Calendario' },
     { href: '/analisis', icon: '📈', label: 'Análisis' },
     { href: '/settings', icon: '⚙️', label: 'Ajustes' },
   ];

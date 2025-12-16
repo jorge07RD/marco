@@ -287,3 +287,16 @@ class CumplimientoHabitoResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+# ==================== Calendario Schemas ====================
+class ProgresoDiaCalendario(BaseModel):
+    """Esquema para mostrar progreso de un día en el calendario."""
+    fecha: str  # Formato YYYY-MM-DD
+    total_habitos: int  # Total de hábitos programados para ese día
+    habitos_completados: int  # Hábitos completados
+    porcentaje: float  # Porcentaje de completitud (0-100)
+    tiene_registro: bool  # Si existe un registro para ese día
+
+    class Config:
+        from_attributes = True
