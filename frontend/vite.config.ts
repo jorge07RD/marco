@@ -14,7 +14,7 @@ export default defineConfig({
 	},
 	preview: {
 		allowedHosts: [
-			'marco-frontend-242884135694.southamerica-east1.run.app'
+			'marco-frontend-242884135694.southamerica-east1.run.app','marco-frontend-qlg7mzvqpq-rj.a.run.app'
 		]
 	}
 });
