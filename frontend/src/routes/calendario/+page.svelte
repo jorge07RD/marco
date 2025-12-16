@@ -235,7 +235,7 @@
 
       <!-- Días del mes -->
       <div class="grid grid-cols-7 gap-1 sm:gap-2">
-        {#each diasCalendario as dia}
+        {#each diasCalendario as dia, i (dia ? `${year}-${month}-${dia.fecha}` : `empty-${i}`)}
           {#if dia === null}
             <!-- Día vacío (de otro mes) -->
             <div class="aspect-square"></div>
@@ -245,9 +245,10 @@
               onclick={() => irADia(dia.fecha)}
               class="aspect-square border border-[#533483] rounded-md p-1 sm:p-2
                      hover:border-[#e94560] active:scale-95 sm:hover:scale-105
-                     transition-all min-h-[44px] touch-manipulation
+                     transition-all min-h-[44px] touch-manipulation flip-in-hor-bottom
                      {getColorPorcentaje(dia.porcentaje)}
                      {esHoy(dia.fecha) ? 'ring-1 sm:ring-2 ring-[#e94560]' : ''}"
+              style="animation-delay: {i * 0.02}s;"
               title="Ver progreso del día"
             >
               <div class="h-full flex flex-col justify-between text-[10px] sm:text-xs">
@@ -377,5 +378,21 @@
 
   :global(.animate-slide-down) {
     animation: slide-down 0.3s ease-out;
+  }
+
+  @keyframes flip-in-hor-bottom {
+    0% {
+      transform: rotateX(80deg);
+      opacity: 0;
+    }
+    100% {
+      transform: rotateX(0);
+      opacity: 1;
+    }
+  }
+
+  :global(.flip-in-hor-bottom) {
+    animation: flip-in-hor-bottom 0.5s cubic-bezier(0.250, 0.460, 0.450, 0.940) both;
+    transform-origin: bottom;
   }
 </style>
