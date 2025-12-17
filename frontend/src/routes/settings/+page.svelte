@@ -1,7 +1,8 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { obtenerUsuarioActual, updateUsuario } from '$lib/api';
+  import { obtenerUsuarioActual, updateUsuario, getCategorias, crearCategoria, updateCategoria, deleteCategoria, type Categoria } from '$lib/api';
   import { authStore } from '$lib/stores/auth.svelte';
+  import ConfirmModal from '$lib/components/ConfirmModal.svelte';
 
   // Configuración del usuario
   let nombreUsuario = $state("");
@@ -15,6 +16,15 @@
   let saved = $state(false);
   let loading = $state(true);
 
+  // Gestión de categorías
+  let categorias = $state<Categoria[]>([]);
+  let nuevaCategoria = $state("");
+  let editandoCategoria = $state<Categoria | null>(null);
+  let nombreCategoriaEdit = $state("");
+  let categoriasLoading = $state(true);
+  let showDeleteConfirm = $state(false);
+  let categoriaToDelete = $state<Categoria | null>(null);
+
   onMount(async () => {
     try {
       const usuario = authStore.user || await obtenerUsuarioActual();
@@ -27,7 +37,81 @@
     } finally {
       loading = false;
     }
+
+    // Cargar categorías
+    await cargarCategorias();
   });
+
+  async function cargarCategorias() {
+    try {
+      categoriasLoading = true;
+      categorias = await getCategorias();
+    } catch (error) {
+      console.error('Error cargando categorías:', error);
+    } finally {
+      categoriasLoading = false;
+    }
+  }
+
+  async function handleCrearCategoria() {
+    if (!nuevaCategoria.trim()) return;
+
+    try {
+      await crearCategoria(nuevaCategoria.trim());
+      nuevaCategoria = "";
+      await cargarCategorias();
+    } catch (error) {
+      console.error('Error creando categoría:', error);
+    }
+  }
+
+  function iniciarEdicion(categoria: Categoria) {
+    editandoCategoria = categoria;
+    nombreCategoriaEdit = categoria.nombre;
+  }
+
+  function cancelarEdicion() {
+    editandoCategoria = null;
+    nombreCategoriaEdit = "";
+  }
+
+  async function handleActualizarCategoria(id: number) {
+    if (!nombreCategoriaEdit.trim()) return;
+
+    try {
+      await updateCategoria(id, nombreCategoriaEdit.trim());
+      editandoCategoria = null;
+      nombreCategoriaEdit = "";
+      await cargarCategorias();
+    } catch (error) {
+      console.error('Error actualizando categoría:', error);
+    }
+  }
+
+  function confirmarEliminar(categoria: Categoria) {
+    categoriaToDelete = categoria;
+    showDeleteConfirm = true;
+  }
+
+  async function handleEliminarCategoria() {
+    if (!categoriaToDelete) return;
+
+    try {
+      await deleteCategoria(categoriaToDelete.id);
+      showDeleteConfirm = false;
+      categoriaToDelete = null;
+      await cargarCategorias();
+    } catch (error) {
+      console.error('Error eliminando categoría:', error);
+      showDeleteConfirm = false;
+      categoriaToDelete = null;
+    }
+  }
+
+  function cancelarEliminar() {
+    showDeleteConfirm = false;
+    categoriaToDelete = null;
+  }
 
   async function toggleVerFuturo() {
     verFuturo = !verFuturo;
@@ -95,6 +179,83 @@
           />
         </div>
       </div>
+    </section>
+
+    <!-- Categorías -->
+    <section class="bg-bg_secondary border border-border rounded-lg p-6">
+      <h2 class="text-xl font-semibold text-text_primary mb-4">📁 Categorías</h2>
+
+      <!-- Formulario para crear categoría -->
+      <form onsubmit={(e) => { e.preventDefault(); handleCrearCategoria(); }} class="mb-4">
+        <div class="flex gap-2">
+          <input
+            type="text"
+            bind:value={nuevaCategoria}
+            placeholder="Nueva categoría..."
+            class="flex-1 bg-bg_input border border-border rounded px-3 py-2 text-text_primary placeholder-text_secondary/50 focus:border-accent focus:outline-none"
+          />
+          <button
+            type="submit"
+            class="bg-accent text-white px-4 py-2 rounded hover:bg-accent/80 transition-colors font-medium"
+          >
+            Añadir
+          </button>
+        </div>
+      </form>
+
+      <!-- Lista de categorías -->
+      {#if categoriasLoading}
+        <p class="text-text_secondary text-sm">Cargando categorías...</p>
+      {:else if categorias.length === 0}
+        <p class="text-text_secondary text-sm">No hay categorías. Crea una para empezar.</p>
+      {:else}
+        <div class="space-y-2">
+          {#each categorias as categoria (categoria.id)}
+            <div class="bg-bg_input border border-border rounded p-3 flex items-center justify-between">
+              {#if editandoCategoria?.id === categoria.id}
+                <!-- Modo edición -->
+                <input
+                  type="text"
+                  bind:value={nombreCategoriaEdit}
+                  class="flex-1 bg-bg_secondary border border-accent rounded px-2 py-1 text-text_primary focus:outline-none mr-2"
+                  autofocus
+                />
+                <div class="flex gap-2">
+                  <button
+                    onclick={() => handleActualizarCategoria(categoria.id)}
+                    class="text-success hover:text-success/80 text-sm font-medium"
+                  >
+                    Guardar
+                  </button>
+                  <button
+                    onclick={cancelarEdicion}
+                    class="text-text_secondary hover:text-white text-sm font-medium"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              {:else}
+                <!-- Modo vista -->
+                <span class="text-text_primary">{categoria.nombre}</span>
+                <div class="flex gap-2">
+                  <button
+                    onclick={() => iniciarEdicion(categoria)}
+                    class="text-warning hover:text-warning/80 text-sm font-medium"
+                  >
+                    Editar
+                  </button>
+                  <button
+                    onclick={() => confirmarEliminar(categoria)}
+                    class="text-accent hover:text-accent/80 text-sm font-medium"
+                  >
+                    Eliminar
+                  </button>
+                </div>
+              {/if}
+            </div>
+          {/each}
+        </div>
+      {/if}
     </section>
 
     <!-- Progreso -->
@@ -219,3 +380,15 @@
     </button>
   </div>
 </div>
+
+<!-- Modal de confirmación para eliminar categoría -->
+{#if showDeleteConfirm && categoriaToDelete}
+  <ConfirmModal
+    title="Eliminar categoría"
+    message="¿Estás seguro de que quieres eliminar '{categoriaToDelete.nombre}'? Los hábitos que usen esta categoría podrían verse afectados."
+    confirmText="Eliminar"
+    cancelText="Cancelar"
+    onConfirm={handleEliminarCategoria}
+    onCancel={cancelarEliminar}
+  />
+{/if}

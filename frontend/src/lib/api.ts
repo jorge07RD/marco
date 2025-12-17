@@ -332,6 +332,57 @@ export async function getCategoria(id: number): Promise<Categoria> {
   return response.json();
 }
 
+/**
+ * Crea una nueva categoría
+ */
+export async function crearCategoria(nombre: string): Promise<Categoria> {
+  const response = await fetchConAuth('/categorias/', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ nombre })
+  });
+
+  if (!response.ok) {
+    throw new Error('Error al crear categoría');
+  }
+
+  return response.json();
+}
+
+/**
+ * Actualiza una categoría existente
+ */
+export async function updateCategoria(id: number, nombre: string): Promise<Categoria> {
+  const response = await fetchConAuth(`/categorias/${id}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ nombre })
+  });
+
+  if (!response.ok) {
+    throw new Error('Error al actualizar categoría');
+  }
+
+  return response.json();
+}
+
+/**
+ * Elimina una categoría
+ */
+export async function deleteCategoria(id: number): Promise<void> {
+  const response = await fetchConAuth(`/categorias/${id}`, {
+    method: 'DELETE'
+  });
+
+  if (!response.ok) {
+    throw new Error('Error al eliminar categoría');
+  }
+}
+
 // ==================== Registros API (Protegidos) ====================
 
 /**
