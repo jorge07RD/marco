@@ -1,6 +1,7 @@
 <script lang="ts">
-  import { createHabito, updateHabito, getCategorias, type Habito, type HabitoCreate, type Categoria } from "$lib/api";
+  import { createHabito, updateHabito, getCategorias, crearCategoria, type Habito, type HabitoCreate, type Categoria } from "$lib/api";
   import { onMount } from "svelte";
+  import { goto } from "$app/navigation";
 
   interface Props {
     habito?: Habito | null;
@@ -25,6 +26,9 @@
   let saving = $state(false);
   let errorMsg = $state<string | null>(null);
   let isClosing = $state(false);
+  let loadingCategorias = $state(true);
+  let mostrarCrearCategoria = $state(false);
+  let nombreNuevaCategoria = $state("");
 
   const diassemana = ["L", "M", "X", "J", "V", "S", "D"];
   const colores = ["#e94560", "#00ff88", "#7b2cbf", "#0b61b8", "#ffd60a", "#ff6b35", "#4ecdc4", "#533483"];
@@ -32,12 +36,48 @@
   const isEditing = habito !== null;
 
   onMount(async () => {
+    await cargarCategorias();
+  });
+
+  async function cargarCategorias() {
     try {
+      loadingCategorias = true;
       categorias = await getCategorias();
+
+      // Si no hay categorías y no está editando, mostrar formulario para crear categoría
+      if (categorias.length === 0 && !isEditing) {
+        mostrarCrearCategoria = true;
+      } else if (categorias.length > 0) {
+        // Si ya hay categorías, asegurarse de que categoria_id tenga valor válido
+        if (!categoria_id || !categorias.find(c => c.id === categoria_id)) {
+          categoria_id = categorias[0].id;
+        }
+      }
     } catch (e) {
       console.error("Error cargando categorías:", e);
+      errorMsg = "Error al cargar categorías";
+    } finally {
+      loadingCategorias = false;
     }
-  });
+  }
+
+  async function handleCrearCategoriaInline() {
+    if (!nombreNuevaCategoria.trim()) {
+      errorMsg = "El nombre de la categoría es requerido";
+      return;
+    }
+
+    try {
+      const nuevaCat = await crearCategoria(nombreNuevaCategoria.trim());
+      await cargarCategorias();
+      categoria_id = nuevaCat.id;
+      nombreNuevaCategoria = "";
+      mostrarCrearCategoria = false;
+      errorMsg = null;
+    } catch (e) {
+      errorMsg = e instanceof Error ? e.message : "Error al crear categoría";
+    }
+  }
 
   function handleClose() {
     isClosing = true;
@@ -135,7 +175,70 @@
       </div>
     {/if}
 
-    <form onsubmit={(e) => { e.preventDefault(); handleSubmit(); }} class="space-y-4">
+    {#if loadingCategorias}
+      <div class="text-center py-8">
+        <p class="text-text_secondary">Cargando categorías...</p>
+      </div>
+    {:else if categorias.length === 0}
+      <!-- No hay categorías - Mostrar opciones para crear -->
+      <div class="bg-warning/10 border border-warning rounded-lg p-4 mb-4">
+        <p class="text-warning font-semibold mb-2">⚠️ No hay categorías</p>
+        <p class="text-text_secondary text-sm mb-3">
+          Necesitas crear al menos una categoría antes de crear un hábito.
+        </p>
+
+        {#if mostrarCrearCategoria}
+          <!-- Formulario inline para crear categoría -->
+          <form onsubmit={(e) => { e.preventDefault(); handleCrearCategoriaInline(); }} class="space-y-3">
+            <div>
+              <label for="nueva-categoria" class="block text-text_secondary text-sm mb-1">
+                Nombre de la categoría
+              </label>
+              <input
+                id="nueva-categoria"
+                type="text"
+                bind:value={nombreNuevaCategoria}
+                placeholder="Ej: Salud, Trabajo, Personal..."
+                class="w-full bg-bg_input border border-border rounded px-3 py-2 text-text_primary placeholder-text_secondary/50 focus:border-accent focus:outline-none"
+                autofocus
+              />
+            </div>
+            <div class="flex gap-2">
+              <button
+                type="submit"
+                class="flex-1 bg-success text-bg_primary font-bold py-2 px-4 rounded hover:bg-success/80 transition-colors"
+              >
+                Crear categoría
+              </button>
+              <button
+                type="button"
+                onclick={handleClose}
+                class="flex-1 border border-border text-text_secondary py-2 px-4 rounded hover:border-text_secondary transition-colors"
+              >
+                Cancelar
+              </button>
+            </div>
+          </form>
+        {:else}
+          <div class="flex gap-2">
+            <button
+              onclick={() => mostrarCrearCategoria = true}
+              class="flex-1 bg-success text-bg_primary font-bold py-2 px-4 rounded hover:bg-success/80 transition-colors"
+            >
+              Crear categoría aquí
+            </button>
+            <button
+              onclick={() => goto('/settings')}
+              class="flex-1 border border-border text-text_secondary py-2 px-4 rounded hover:border-text_secondary transition-colors"
+            >
+              Ir a Ajustes
+            </button>
+          </div>
+        {/if}
+      </div>
+    {:else}
+      <!-- Formulario de hábito normal -->
+      <form onsubmit={(e) => { e.preventDefault(); handleSubmit(); }} class="space-y-4">
       <!-- Nombre -->
       <div>
         <label for="nombre" class="block text-text_secondary text-sm mb-1">Nombre</label>
@@ -260,5 +363,6 @@
         </button>
       </div>
     </form>
+    {/if}
   </div>
 </div>
