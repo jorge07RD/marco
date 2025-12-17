@@ -14,7 +14,6 @@
   let temaOscuro = $state(true);
   let saving = $state(false);
   let saved = $state(false);
-  let loading = $state(true);
 
   // Gestión de categorías
   let categorias = $state<Categoria[]>([]);
@@ -34,8 +33,6 @@
       console.log('Usuario cargado, ver_futuro:', usuario.ver_futuro);
     } catch (error) {
       console.error('Error cargando usuario:', error);
-    } finally {
-      loading = false;
     }
 
     // Cargar categorías
