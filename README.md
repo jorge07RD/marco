@@ -5,7 +5,8 @@
 ![Version](https://img.shields.io/badge/version-2.0.0-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688.svg?logo=fastapi)
-![SvelteKit](https://img.shields.io/badge/SvelteKit-2.0-FF3E00.svg?logo=svelte)
+![SvelteKit](https://img.shields.io/badge/SvelteKit-2.9-FF3E00.svg?logo=svelte)
+![Svelte](https://img.shields.io/badge/Svelte-5.12-FF3E00.svg?logo=svelte)
 ![SQLite](https://img.shields.io/badge/SQLite-3-003B57.svg?logo=sqlite)
 
 **Una aplicación moderna para el seguimiento de hábitos diarios**
@@ -26,6 +27,7 @@
 - 📅 Programar hábitos para días específicos de la semana
 - 📊 Visualizar tu progreso diario con barras de progreso animadas
 - 📈 **Análisis avanzado con 8 tipos de gráficos** (Area, Polar, Pie, Spline, Column, Gauge, Radar, Bar)
+- 🗓️ **Vista de calendario mensual** - Visualiza todo tu progreso del mes con código de colores
 - 🗓️ **Filtros de fecha flexibles** con shortcuts rápidos (este mes, última semana, etc.)
 - 🎨 Personalizar colores para cada hábito
 - 🔔 Recibir notificaciones visuales cuando no puedes ver el futuro
@@ -37,9 +39,10 @@
 
 ### 🎨 Interfaz de Usuario
 - **Diseño Oscuro Premium** - Tema oscuro elegante con acentos de color vibrantes
-- **Animaciones Fluidas** - Transiciones suaves al agregar, eliminar y completar hábitos
+- **Animaciones Fluidas** - Transiciones suaves y animaciones personalizadas de carga
 - **Efecto Neon Gradient** - Barra de progreso con efecto neón (púrpura → rojo → naranja) al completar todos los hábitos
 - **Responsive Design** - Funciona perfectamente en móviles, tablets y escritorio
+- **UX Móvil Optimizada** - Navegación estable y sin interrupciones en dispositivos móviles
 
 ### 📱 Funcionalidades
 | Característica | Descripción |
@@ -48,19 +51,23 @@
 | 👤 **Multi-usuario** | Cada usuario tiene sus propios datos completamente separados |
 | 🛡️ **Protección de Rutas** | Redirección automática a login si no estás autenticado |
 | 🎯 **Gestión de Hábitos** | Crear, editar y eliminar hábitos con facilidad |
+| 📁 **Gestión de Categorías** | CRUD completo de categorías para organizar tus hábitos |
 | 📅 **Programación Flexible** | Asigna hábitos a días específicos (L, M, X, J, V, S, D) |
 | 📈 **Seguimiento de Progreso** | Registra valores y marca hábitos como completados |
 | 🗓️ **Navegación por Fechas** | Navega entre días para revisar tu historial |
+| 📅 **Calendario Mensual** | Vista completa del mes con código de colores según porcentaje de cumplimiento |
 | 📊 **Análisis Avanzado** | 8 gráficos interactivos con Highcharts para visualizar tu rendimiento |
 | 📈 **Reportes Personalizados** | Filtra por rango de fechas y obtén insights de tu progreso |
 | ⚙️ **Configuración de Usuario** | Controla si puedes ver días futuros y edita tu perfil |
 | 🗑️ **Eliminación en Cascada** | Al eliminar un hábito, se eliminan todos sus registros |
 
 ### 🎭 Efectos Visuales
+- **Animaciones Personalizadas** - Sistema de carga con animaciones modernas que reemplazan spinners tradicionales
 - **Shake Animation** - Sacudida suave al intentar ver el futuro (cuando está deshabilitado)
 - **Slide Out Animation** - Animación de deslizamiento al eliminar tarjetas
 - **Toast Notifications** - Notificaciones flotantes temporales
 - **Bulb Flicker Effect** - Parpadeo sutil en la barra de progreso completada
+- **Navegación Móvil Optimizada** - Navbar estable sin desapariciones durante animaciones
 
 ---
 
@@ -80,12 +87,12 @@
 
 ### Frontend
 ```
-🔥 SvelteKit 2.0 - Framework de aplicaciones web
-⚡ Svelte 5 - Con Runes ($state, $effect)
-🎨 Tailwind CSS 4 - Framework de utilidades CSS
-📊 Highcharts 12 - Librería de gráficos interactivos
-📦 Vite 6 - Build tool ultrarrápido
-📝 TypeScript - Tipado estático
+🔥 SvelteKit 2.9 - Framework de aplicaciones web
+⚡ Svelte 5.12 - Con Runes ($state, $effect)
+🎨 Tailwind CSS 4.1 - Framework de utilidades CSS
+📊 Highcharts 12.1 - Librería de gráficos interactivos
+📦 Vite 6.0 - Build tool ultrarrápido
+📝 TypeScript 5.7 - Tipado estático
 ```
 
 ### Base de Datos
@@ -136,6 +143,7 @@ marco/
 │   │       ├── 📂 register/        # 🔐 Registro
 │   │       ├── 📂 habitos/         # Gestión de hábitos
 │   │       ├── 📂 analisis/        # 📊 Análisis y reportes (8 gráficos)
+│   │       ├── 📂 calendario/      # 📅 Vista de calendario mensual
 │   │       ├── 📂 charts/          # Visualizaciones (legacy)
 │   │       ├── 📂 items/           # Items
 │   │       ├── 📂 progreso/        # Progreso detallado
@@ -325,11 +333,14 @@ erDiagram
 | `PUT` | `/api/usuarios/{id}/` | Actualizar usuario |
 | `DELETE` | `/api/usuarios/{id}/` | Eliminar usuario |
 
-### 📁 Categorías
+### 📁 Categorías (Protegidas 🔒)
 | Método | Endpoint | Descripción |
 |--------|----------|-------------|
-| `GET` | `/api/categorias/` | 🔒 Listar categorías |
-| `POST` | `/api/categorias/` | 🔒 Crear categoría |
+| `GET` | `/api/categorias/` | Listar todas las categorías |
+| `GET` | `/api/categorias/{id}` | Obtener categoría por ID |
+| `POST` | `/api/categorias/` | Crear nueva categoría |
+| `PUT` | `/api/categorias/{id}` | Actualizar categoría |
+| `DELETE` | `/api/categorias/{id}` | Eliminar categoría |
 
 ### 🎯 Hábitos (Protegidos 🔒)
 | Método | Endpoint | Descripción |
@@ -413,7 +424,19 @@ Authorization: Bearer <tu-token-jwt>
 ### Gestión de Hábitos
 *Crear, editar y eliminar hábitos con animaciones fluidas*
 
-### 📊 Análisis y Reportes (¡NUEVO!)
+### 📅 Calendario de Progreso Mensual
+*Vista de calendario completa con código de colores y navegación entre meses*
+
+**Características del calendario:**
+- Visualización del mes completo con código de colores por porcentaje de cumplimiento
+- Navegación rápida entre meses con botones anterior/siguiente
+- Vista detallada de cada día mostrando hábitos completados vs totales
+- Indicador visual del día actual con borde destacado
+- Clic en cualquier día para ver el progreso detallado
+- Leyenda de colores colapsable (0%, <25%, 25-49%, 50-74%, 75-99%, 100%)
+- Sistema de animaciones personalizadas (Orbit Spinner) para carga
+
+### 📊 Análisis y Reportes
 *8 gráficos interactivos con Highcharts para visualizar tu rendimiento*
 
 **Gráficos disponibles:**
