@@ -63,7 +63,7 @@ async def root():
 async def health_check():
     """Health check endpoint para verificar que la API está funcionando."""
     return {
-        "status": "healthy",
+        "status": "healthy wiiiiiiii",
         "app": settings.app_name,
         "version": settings.api_version,
         "environment": settings.environment
