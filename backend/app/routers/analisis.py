@@ -227,9 +227,11 @@ async def get_cumplimiento_habitos(
 
         # Solo agregar si el hábito tiene al menos un día aplicable en el rango
         if total_habitos > 0:
+            # Convertir fecha a string si es necesario
+            fecha_str = fecha_primera.strftime("%Y-%m-%d") if isinstance(fecha_primera, date) else fecha_primera
             respuesta.append(
                 CumplimientoHabitoResponse(
-                    fecha=fecha_primera,
+                    fecha=fecha_str,
                     nombre_habito=habito.nombre_habito,
                     habitos_completados=habitos_completados,
                     total_habitos=total_habitos,
