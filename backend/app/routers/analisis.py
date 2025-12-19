@@ -79,16 +79,28 @@ async def get_rendimiento_por_dia(
     fechas_result = await db.execute(fechas_query)
     fechas = [row[0] for row in fechas_result.all()]
 
-    # Obtener todos los hábitos activos del usuario
+    # Obtener todos los hábitos del usuario con sus días configurados
     habitos_query = (
-        select(habitos.id)
+        select(habitos.id, habitos.dias)
         .where(habitos.usuario_id == current_user.id)
     )
     habitos_result = await db.execute(habitos_query)
-    habitos_ids = [row[0] for row in habitos_result.all()]
+    habitos_list = habitos_result.all()
 
     respuesta = []
     for fecha in fechas:
+        # Convertir fecha a objeto date si es string
+        if isinstance(fecha, str):
+            fecha_obj = datetime.strptime(fecha, "%Y-%m-%d").date()
+        else:
+            fecha_obj = fecha
+
+        # Contar cuántos hábitos aplican para este día de la semana
+        habitos_del_dia = sum(
+            1 for h in habitos_list
+            if dia_aplica_para_habito(h.dias, fecha_obj)
+        )
+
         # Contar hábitos completados ese día
         completados_query = (
             select(func.count())
@@ -105,10 +117,13 @@ async def get_rendimiento_por_dia(
         completados_result = await db.execute(completados_query)
         habitos_completados = completados_result.scalar() or 0
 
+        # Convertir fecha a string si es necesario
+        fecha_str = fecha_obj.strftime("%Y-%m-%d") if isinstance(fecha_obj, date) else fecha
+
         respuesta.append(
             RendimientoDiaResponse(
-                fecha=fecha,
-                habitos=len(habitos_ids),
+                fecha=fecha_str,
+                habitos=habitos_del_dia,
                 habitos_completados=habitos_completados
             )
         )
