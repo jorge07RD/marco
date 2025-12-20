@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, func
 from typing import List
-from datetime import datetime
+from datetime import datetime, date
 import json
 
 from app.database import get_db
@@ -11,6 +11,22 @@ from app.schemas import RendimientoDiaResponse, CumplimientoHabitoResponse
 from app.security import get_current_user
 
 router = APIRouter(prefix="/analisis", tags=["analisis"])
+
+
+def get_dia_letra(fecha: date) -> str:
+    """Retorna la letra del día de la semana (L, M, X, J, V, S, D)."""
+    dias_semana = ['L', 'M', 'X', 'J', 'V', 'S', 'D']
+    return dias_semana[fecha.weekday()]
+
+
+def dia_aplica_para_habito(dias_json: str, fecha: date) -> bool:
+    """Verifica si una fecha aplica para los días configurados del hábito."""
+    try:
+        dias = json.loads(dias_json) if dias_json else []
+        dia_letra = get_dia_letra(fecha)
+        return dia_letra in dias
+    except (json.JSONDecodeError, TypeError):
+        return False
 
 
 @router.get("/rendimiento", response_model=List[RendimientoDiaResponse])
@@ -63,16 +79,28 @@ async def get_rendimiento_por_dia(
     fechas_result = await db.execute(fechas_query)
     fechas = [row[0] for row in fechas_result.all()]
 
-    # Obtener todos los hábitos activos del usuario
+    # Obtener todos los hábitos del usuario con sus días configurados
     habitos_query = (
-        select(habitos.id)
+        select(habitos.id, habitos.dias)
         .where(habitos.usuario_id == current_user.id)
     )
     habitos_result = await db.execute(habitos_query)
-    habitos_ids = [row[0] for row in habitos_result.all()]
+    habitos_list = habitos_result.all()
 
     respuesta = []
     for fecha in fechas:
+        # Convertir fecha a objeto date si es string
+        if isinstance(fecha, str):
+            fecha_obj = datetime.strptime(fecha, "%Y-%m-%d").date()
+        else:
+            fecha_obj = fecha
+
+        # Contar cuántos hábitos aplican para este día de la semana
+        habitos_del_dia = sum(
+            1 for h in habitos_list
+            if dia_aplica_para_habito(h.dias, fecha_obj)
+        )
+
         # Contar hábitos completados ese día
         completados_query = (
             select(func.count())
@@ -89,10 +117,13 @@ async def get_rendimiento_por_dia(
         completados_result = await db.execute(completados_query)
         habitos_completados = completados_result.scalar() or 0
 
+        # Convertir fecha a string si es necesario
+        fecha_str = fecha_obj.strftime("%Y-%m-%d") if isinstance(fecha_obj, date) else fecha
+
         respuesta.append(
             RendimientoDiaResponse(
-                fecha=fecha,
-                habitos=len(habitos_ids),
+                fecha=fecha_str,
+                habitos=habitos_del_dia,
                 habitos_completados=habitos_completados
             )
         )
@@ -160,29 +191,43 @@ async def get_cumplimiento_habitos(
         select(
             habitos.id,
             habitos.nombre.label('nombre_habito'),
-            habitos.color
+            habitos.color,
+            habitos.dias
         )
         .where(habitos.usuario_id == current_user.id)
     )
     habitos_result = await db.execute(habitos_query)
     habitos_list = habitos_result.all()
 
+    # Convertir fechas string a objetos date para poder obtener el día de la semana
+    fechas_date = []
+    for f in fechas:
+        if isinstance(f, str):
+            fechas_date.append(datetime.strptime(f, "%Y-%m-%d").date())
+        else:
+            fechas_date.append(f)
+
     respuesta = []
     for habito in habitos_list:
-        # Para cada fecha, buscar si hay progreso
+        # Para cada fecha, buscar si hay progreso (solo si aplica para ese día)
         total_habitos = 0
         habitos_completados = 0
         fecha_primera = None
 
-        for fecha in fechas:
+        for fecha in fechas_date:
+            # Verificar si el hábito aplica para este día de la semana
+            if not dia_aplica_para_habito(habito.dias, fecha):
+                continue
+
             # Buscar progreso para este hábito y fecha
+            fecha_str = fecha.strftime("%Y-%m-%d") if isinstance(fecha, date) else fecha
             prog_query = (
                 select(progreso_habitos.completado)
                 .join(registros, registros.id == progreso_habitos.registro_id)
                 .where(
                     and_(
                         progreso_habitos.habito_id == habito.id,
-                        registros.fecha == fecha,
+                        registros.fecha == fecha_str,
                         registros.usuario_id == current_user.id
                     )
                 )
@@ -195,14 +240,18 @@ async def get_cumplimiento_habitos(
             if fecha_primera is None or fecha < fecha_primera:
                 fecha_primera = fecha
 
-        respuesta.append(
-            CumplimientoHabitoResponse(
-                fecha=fecha_primera,
-                nombre_habito=habito.nombre_habito,
-                habitos_completados=habitos_completados,
-                total_habitos=total_habitos,
-                color=habito.color
+        # Solo agregar si el hábito tiene al menos un día aplicable en el rango
+        if total_habitos > 0:
+            # Convertir fecha a string si es necesario
+            fecha_str = fecha_primera.strftime("%Y-%m-%d") if isinstance(fecha_primera, date) else fecha_primera
+            respuesta.append(
+                CumplimientoHabitoResponse(
+                    fecha=fecha_str,
+                    nombre_habito=habito.nombre_habito,
+                    habitos_completados=habitos_completados,
+                    total_habitos=total_habitos,
+                    color=habito.color
+                )
             )
-        )
 
     return respuesta
