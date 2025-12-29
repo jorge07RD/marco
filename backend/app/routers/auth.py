@@ -117,7 +117,7 @@ async def login(
     Inicia sesión de un usuario existente.
 
     Args:
-        credentials: Credenciales de login (email y password)
+        credentials: Credenciales de login (nombre/email y password)
         db: Sesión de base de datos
 
     Returns:
@@ -127,12 +127,12 @@ async def login(
         HTTPException 401: Si las credenciales son inválidas
     """
     # Autenticar usuario
-    user = await authenticate_user(credentials.email, credentials.password, db)
+    user = await authenticate_user(credentials.identifier, credentials.password, db)
 
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Email o contraseña incorrectos",
+            detail="Nombre/email o contraseña incorrectos",
             headers={"WWW-Authenticate": "Bearer"},
         )
 

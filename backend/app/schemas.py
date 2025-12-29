@@ -213,13 +213,13 @@ class UsuarioConHabitos(UsuarioResponse):
 # ==================== Auth Schemas ====================
 class LoginRequest(BaseModel):
     """Esquema para solicitud de login."""
-    email: EmailStr = Field(..., description="Email del usuario")
+    identifier: str = Field(..., min_length=1, description="Nombre de usuario o email")
     password: str = Field(..., min_length=6, description="Contraseña del usuario")
 
     class Config:
         json_schema_extra = {
             "example": {
-                "email": "jorge@jorge.com",
+                "identifier": "jorge@jorge.com",
                 "password": "12345678"
             }
         }

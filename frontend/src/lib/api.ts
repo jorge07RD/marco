@@ -52,7 +52,7 @@ async function fetchConAuth(url: string, options: RequestInit = {}): Promise<Res
 
 // Auth Types
 export interface LoginRequest {
-  email: string;
+  identifier: string;
   password: string;
 }
 
