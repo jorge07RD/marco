@@ -132,7 +132,7 @@ class TestLogin:
         response = await test_client.post(
             "/auth/login",
             json={
-                "email": "test@example.com",
+                "identifier": "test@example.com",
                 "password": "TestPassword123"
             }
         )
@@ -160,7 +160,7 @@ class TestLogin:
         response = await test_client.post(
             "/auth/login",
             json={
-                "email": "test@example.com",
+                "identifier": "test@example.com",
                 "password": "WrongPassword123"
             }
         )
@@ -174,7 +174,7 @@ class TestLogin:
         response = await test_client.post(
             "/auth/login",
             json={
-                "email": "noexiste@example.com",
+                "identifier": "noexiste@example.com",
                 "password": "SomePassword123"
             }
         )
@@ -184,11 +184,11 @@ class TestLogin:
 
     @pytest.mark.asyncio
     async def test_login_invalid_email_format_fails(self, test_client: AsyncClient):
-        """Test: Debe rechazar formato de email inválido."""
+        """Test: Debe rechazar identifier vacío."""
         response = await test_client.post(
             "/auth/login",
             json={
-                "email": "email_invalido",
+                "identifier": "",
                 "password": "SomePassword123"
             }
         )

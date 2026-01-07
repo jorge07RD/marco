@@ -193,7 +193,7 @@ async def auth_token(test_client: AsyncClient, test_user: usuario) -> str:
     response = await test_client.post(
         "/auth/login",
         json={
-            "email": "test@example.com",
+            "identifier": "test@example.com",
             "password": "TestPassword123"
         }
     )

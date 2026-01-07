@@ -4,6 +4,7 @@ from sqlalchemy import select, and_
 from typing import List
 from datetime import date
 import logging
+import json
 
 from app.database import get_db
 from app.models import habitos, registros, progreso_habitos, usuario
