@@ -3,14 +3,14 @@
   import { login } from '$lib/api';
   import { authStore } from '$lib/stores/auth.svelte';
 
-  let email = $state('');
+  let identifier = $state('');
   let password = $state('');
   let loading = $state(false);
   let error = $state<string | null>(null);
 
   // Validación simple
   let formValid = $derived(
-    email.length > 0 &&
+    identifier.length > 0 &&
     password.length >= 6
   );
 
@@ -23,7 +23,7 @@
     error = null;
 
     try {
-      const response = await login({ email, password });
+      const response = await login({ identifier, password });
       authStore.setUser(response.user);
 
       // Redirigir a la página principal
@@ -62,18 +62,18 @@
 
     <!-- Login Form -->
     <form onsubmit={handleLogin} class="space-y-5">
-      <!-- Email -->
+      <!-- Identifier (Nombre o Email) -->
       <div>
-        <label for="email" class="block text-sm font-medium text-white mb-2">
-          Correo Electrónico
+        <label for="identifier" class="block text-sm font-medium text-white mb-2">
+          Nombre de Usuario o Correo
         </label>
         <input
-          id="email"
-          type="email"
-          bind:value={email}
+          id="identifier"
+          type="text"
+          bind:value={identifier}
           required
           disabled={loading}
-          placeholder="tu@email.com"
+          placeholder="tu_nombre o tu@email.com"
           class="w-full bg-[#0E0D0D] border border-[#533483] text-white px-4 py-3
                  rounded-md focus:outline-none focus:ring-2 focus:ring-[#e94560]
                  transition-all disabled:opacity-50 disabled:cursor-not-allowed

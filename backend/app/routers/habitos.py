@@ -14,12 +14,53 @@ from app.utils import dia_en_lista, obtener_dia_letra
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/habitos", tags=["habitos"])
+def dia_en_lista(dias_str: str, dia_letra: str) -> bool:
+    """
+    Verifica si un día está en la lista de días del hábito.
+
+    Args:
+        dias_str: String JSON con lista de días (ej: '["L", "M", "X"]')
+        dia_letra: Letra del día a verificar (L, M, X, J, V, S, D)
+
+    Returns:
+        True si el día está en la lista, False en caso contrario
+
+    Raises:
+        ValueError: Si dias_str no es un JSON válido
+        TypeError: Si el JSON no contiene una lista
+    """
+    try:
+        dias = json.loads(dias_str)
+    except json.JSONDecodeError as e:
+        raise ValueError(
+            f"Error al parsear días del hábito. JSON inválido: {dias_str}"
+        ) from e
+
+    if not isinstance(dias, list):
+        raise TypeError(
+            f"El campo 'dias' debe ser una lista, no {type(dias).__name__}. "
+            f"Valor recibido: {dias_str}"
+        )
+
+    return dia_letra in dias
 
 
-async def agregar_habito_a_registro_hoy(habito_id: int, usuario_id: int, db: AsyncSession):
+async def agregar_habito_a_registro_hoy(
+    habito_id: int,
+    usuario_id: int,
+    db: AsyncSession
+) -> None:
     """
     Agrega un hábito al registro del día actual si existe.
     No crea el registro si no existe.
+
+    Args:
+        habito_id: ID del hábito a agregar
+        usuario_id: ID del usuario dueño del registro
+        db: Sesión de base de datos
+
+    Returns:
+        None: Esta es una función procedural que no retorna valor
     """
     hoy = date.today().isoformat()
     
@@ -54,9 +95,21 @@ async def agregar_habito_a_registro_hoy(habito_id: int, usuario_id: int, db: Asy
             db.add(progreso)
 
 
-async def quitar_habito_de_registro_hoy(habito_id: int, usuario_id: int, db: AsyncSession):
+async def quitar_habito_de_registro_hoy(
+    habito_id: int,
+    usuario_id: int,
+    db: AsyncSession
+) -> None:
     """
     Quita un hábito del registro del día actual si existe.
+
+    Args:
+        habito_id: ID del hábito a quitar
+        usuario_id: ID del usuario dueño del registro
+        db: Sesión de base de datos
+
+    Returns:
+        None: Esta es una función procedural que no retorna valor
     """
     hoy = date.today().isoformat()
     

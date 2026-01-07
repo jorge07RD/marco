@@ -154,21 +154,23 @@ async def get_current_user(
     return db_user
 
 
-async def authenticate_user(email: str, password: str, db: AsyncSession) -> Optional[usuario]:
+async def authenticate_user(identifier: str, password: str, db: AsyncSession) -> Optional[usuario]:
     """
-    Autentica un usuario verificando email y contraseña.
+    Autentica un usuario verificando nombre/email y contraseña.
 
     Args:
-        email: Email del usuario
+        identifier: Nombre de usuario o email
         password: Contraseña en texto plano
         db: Sesión de base de datos
 
     Returns:
         Usuario si las credenciales son válidas, None en caso contrario
     """
-    # Buscar usuario por email
+    # Buscar usuario por email o nombre
     result = await db.execute(
-        select(usuario).where(usuario.email == email)
+        select(usuario).where(
+            (usuario.email == identifier) | (usuario.nombre == identifier)
+        )
     )
     db_user = result.scalar_one_or_none()
 
