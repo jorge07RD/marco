@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, EmailStr
+from pydantic import BaseModel, Field, EmailStr, ConfigDict
 from datetime import datetime
 from typing import Optional
 
@@ -26,8 +26,7 @@ class UsuarioResponse(UsuarioBase):
     created_at: datetime
     updated_at: Optional[datetime] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # ==================== Categoria Schemas ====================
@@ -48,8 +47,7 @@ class CategoriaResponse(CategoriaBase):
     created_at: datetime
     updated_at: Optional[datetime] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # ==================== Habito Schemas ====================
@@ -93,8 +91,7 @@ class HabitoResponse(HabitoBase):
     created_at: datetime
     updated_at: Optional[datetime] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # ==================== Registro Schemas ====================
@@ -119,8 +116,7 @@ class RegistroResponse(RegistroBase):
     created_at: datetime
     updated_at: Optional[datetime] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # ==================== ProgresoHabito Schemas ====================
@@ -147,8 +143,7 @@ class ProgresoHabitoResponse(ProgresoHabitoBase):
     created_at: datetime
     updated_at: Optional[datetime] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # ==================== Registro con Progresos ====================
@@ -170,8 +165,7 @@ class RegistroHabitoDiaResponse(RegistroHabitoDiaBase):
     id: int
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # ==================== HabitoDia Schemas ====================
@@ -193,8 +187,7 @@ class HabitoDiaResponse(HabitoDiaBase):
     created_at: datetime
     updated_at: Optional[datetime] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # ==================== Schemas con relaciones ====================
@@ -216,13 +209,14 @@ class LoginRequest(BaseModel):
     email: EmailStr = Field(..., description="Email del usuario")
     password: str = Field(..., min_length=6, description="Contraseña del usuario")
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "email": "jorge@jorge.com",
                 "password": "12345678"
             }
         }
+    )
 
 
 class RegisterRequest(BaseModel):
@@ -232,8 +226,8 @@ class RegisterRequest(BaseModel):
     password: str = Field(..., min_length=8, description="Contraseña (mínimo 8 caracteres)")
     ver_futuro: bool = Field(default=False, description="Permite ver fechas futuras")
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "nombre": "Juan Pérez",
                 "email": "juan@example.com",
@@ -241,6 +235,7 @@ class RegisterRequest(BaseModel):
                 "ver_futuro": False
             }
         }
+    )
 
 
 class TokenResponse(BaseModel):
@@ -249,8 +244,8 @@ class TokenResponse(BaseModel):
     token_type: str = Field(default="bearer", description="Tipo de token")
     user: UsuarioResponse = Field(..., description="Datos del usuario autenticado")
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
                 "token_type": "bearer",
@@ -264,6 +259,7 @@ class TokenResponse(BaseModel):
                 }
             }
         }
+    )
 
 
 # ==================== Analytics Schemas ====================
@@ -273,8 +269,7 @@ class RendimientoDiaResponse(BaseModel):
     habitos: int
     habitos_completados: int
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class CumplimientoHabitoResponse(BaseModel):
@@ -285,8 +280,7 @@ class CumplimientoHabitoResponse(BaseModel):
     total_habitos: int
     color: str
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # ==================== Calendario Schemas ====================
@@ -298,5 +292,4 @@ class ProgresoDiaCalendario(BaseModel):
     porcentaje: float  # Porcentaje de completitud (0-100)
     tiene_registro: bool  # Si existe un registro para ese día
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)

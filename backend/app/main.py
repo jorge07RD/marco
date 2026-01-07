@@ -38,13 +38,13 @@ app.add_middleware(
 )
 
 # Routers
-app.include_router(auth.router, prefix="/api")  # Auth router sin protección
-app.include_router(usuarios.router, prefix="/api")
-app.include_router(categorias.router, prefix="/api")
-app.include_router(habitos.router, prefix="/api")
-app.include_router(registros.router, prefix="/api")
-app.include_router(habito_dias.router, prefix="/api")
-app.include_router(analisis.router, prefix="/api")
+app.include_router(auth.router)
+app.include_router(usuarios.router)
+app.include_router(categorias.router)
+app.include_router(habitos.router)
+app.include_router(registros.router)
+app.include_router(habito_dias.router)
+app.include_router(analisis.router)
 
 
 @app.get("/")

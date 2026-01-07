@@ -228,7 +228,7 @@ class TestGetMe:
         """Test: Debe rechazar petición sin autenticación."""
         response = await test_client.get("/auth/me")
 
-        assert response.status_code == 403  # Forbidden
+        assert response.status_code == 401  # Unauthorized (no hay token)
 
     @pytest.mark.asyncio
     async def test_get_me_with_invalid_token_fails(self, test_client: AsyncClient):
@@ -344,4 +344,4 @@ class TestUpdateMe:
             json={"nombre": "nuevo_nombre"}
         )
 
-        assert response.status_code == 403  # Forbidden
+        assert response.status_code == 401  # Unauthorized (no hay token)
