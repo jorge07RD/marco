@@ -3,6 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_
 from typing import List
 from datetime import date, datetime
+import logging
 
 from app.database import get_db
 from app.models import registros, progreso_habitos, usuario, habitos
@@ -12,6 +13,9 @@ from app.schemas import (
     ProgresoDiaCalendario
 )
 from app.security import get_current_user
+from app.utils import parsear_dias_habito, obtener_dia_letra
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/registros", tags=["registros"])
 
@@ -74,8 +78,7 @@ async def get_or_create_registro_por_fecha(
         await db.flush()
 
         # Obtener hábitos activos del usuario para ese día de la semana
-        dias_semana = ['D', 'L', 'M', 'X', 'J', 'V', 'S']
-        dia_letra = dias_semana[fecha_obj.weekday() + 1] if fecha_obj.weekday() < 6 else dias_semana[0]
+        dia_letra = obtener_dia_letra(fecha_obj)
 
         habitos_result = await db.execute(
             select(habitos).where(
@@ -83,11 +86,12 @@ async def get_or_create_registro_por_fecha(
             )
         )
         habitos_usuario = habitos_result.scalars().all()
-        
+
         # Crear progreso para cada hábito activo ese día
         for habito in habitos_usuario:
             try:
-                dias_habito = eval(habito.dias)  # Parse JSON string
+                dias_habito = parsear_dias_habito(habito.dias)
+
                 if dia_letra in dias_habito:
                     progreso = progreso_habitos(
                         registro_id=db_registro.id,
@@ -96,8 +100,14 @@ async def get_or_create_registro_por_fecha(
                         completado=False
                     )
                     db.add(progreso)
-            except:
-                pass
+
+            except ValueError as e:
+                # Log del error pero continuar con otros hábitos
+                logger.warning(
+                    f"Error parseando días del hábito {habito.id}: {e}. "
+                    f"Saltando este hábito."
+                )
+                continue
         
         await db.commit()
         await db.refresh(db_registro)
@@ -129,89 +139,153 @@ async def get_or_create_registro_por_fecha(
 
 @router.put("/progreso/{progreso_id}", response_model=ProgresoHabitoResponse)
 async def update_progreso(
-    progreso_id: int, 
-    progreso_data: ProgresoHabitoUpdate, 
+    progreso_id: int,
+    progreso_data: ProgresoHabitoUpdate,
+    current_user: usuario = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
-    """Actualiza el progreso de un hábito específico."""
+    """Actualiza el progreso de un hábito específico (solo del usuario autenticado)."""
     result = await db.execute(
         select(progreso_habitos).where(progreso_habitos.id == progreso_id)
     )
     db_progreso = result.scalar_one_or_none()
     if not db_progreso:
         raise HTTPException(status_code=404, detail="Progreso no encontrado")
-    
+
+    # Verificar que el progreso pertenece al usuario actual
+    registro_result = await db.execute(
+        select(registros).where(registros.id == db_progreso.registro_id)
+    )
+    registro = registro_result.scalar_one_or_none()
+
+    if not registro or registro.usuario_id != current_user.id:
+        raise HTTPException(
+            status_code=403,
+            detail="No tienes permiso para modificar este progreso"
+        )
+
     update_data = progreso_data.model_dump(exclude_unset=True)
     for key, value in update_data.items():
         setattr(db_progreso, key, value)
-    
+
     await db.commit()
     await db.refresh(db_progreso)
     return db_progreso
 
 
 @router.post("/progreso/toggle/{progreso_id}", response_model=ProgresoHabitoResponse)
-async def toggle_progreso(progreso_id: int, db: AsyncSession = Depends(get_db)):
-    """Alterna el estado de completado de un progreso."""
+async def toggle_progreso(
+    progreso_id: int,
+    current_user: usuario = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Alterna el estado de completado de un progreso (solo del usuario autenticado)."""
     result = await db.execute(
         select(progreso_habitos).where(progreso_habitos.id == progreso_id)
     )
     db_progreso = result.scalar_one_or_none()
     if not db_progreso:
         raise HTTPException(status_code=404, detail="Progreso no encontrado")
-    
+
+    # Verificar que el progreso pertenece al usuario actual
+    registro_result = await db.execute(
+        select(registros).where(registros.id == db_progreso.registro_id)
+    )
+    registro = registro_result.scalar_one_or_none()
+
+    if not registro or registro.usuario_id != current_user.id:
+        raise HTTPException(
+            status_code=403,
+            detail="No tienes permiso para modificar este progreso"
+        )
+
     # Obtener la meta del hábito
     habito_result = await db.execute(
         select(habitos).where(habitos.id == db_progreso.habito_id)
     )
     db_habito = habito_result.scalar_one_or_none()
-    
+
     if db_progreso.completado:
         db_progreso.completado = False
         db_progreso.valor = 0
     else:
         db_progreso.completado = True
         db_progreso.valor = db_habito.meta_diaria if db_habito else 1
-    
+
     await db.commit()
     await db.refresh(db_progreso)
     return db_progreso
 
 
 @router.get("/{registro_id}", response_model=RegistroResponse)
-async def get_registro(registro_id: int, db: AsyncSession = Depends(get_db)):
-    """Obtiene un registro específico por su ID."""
+async def get_registro(
+    registro_id: int,
+    current_user: usuario = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Obtiene un registro específico por su ID (solo del usuario autenticado)."""
     result = await db.execute(select(registros).where(registros.id == registro_id))
     db_registro = result.scalar_one_or_none()
     if not db_registro:
         raise HTTPException(status_code=404, detail="Registro no encontrado")
+
+    # Verificar que el registro pertenece al usuario actual
+    if db_registro.usuario_id != current_user.id:
+        raise HTTPException(
+            status_code=403,
+            detail="No tienes permiso para ver este registro"
+        )
+
     return db_registro
 
 
 @router.put("/{registro_id}", response_model=RegistroResponse)
-async def update_registro(registro_id: int, registro_data: RegistroUpdate, db: AsyncSession = Depends(get_db)):
-    """Actualiza las notas de un registro."""
+async def update_registro(
+    registro_id: int,
+    registro_data: RegistroUpdate,
+    current_user: usuario = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Actualiza las notas de un registro (solo del usuario autenticado)."""
     result = await db.execute(select(registros).where(registros.id == registro_id))
     db_registro = result.scalar_one_or_none()
     if not db_registro:
         raise HTTPException(status_code=404, detail="Registro no encontrado")
-    
+
+    # Verificar que el registro pertenece al usuario actual
+    if db_registro.usuario_id != current_user.id:
+        raise HTTPException(
+            status_code=403,
+            detail="No tienes permiso para modificar este registro"
+        )
+
     update_data = registro_data.model_dump(exclude_unset=True)
     for key, value in update_data.items():
         setattr(db_registro, key, value)
-    
+
     await db.commit()
     await db.refresh(db_registro)
     return db_registro
 
 
 @router.delete("/{registro_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_registro(registro_id: int, db: AsyncSession = Depends(get_db)):
-    """Elimina un registro del sistema por su ID."""
+async def delete_registro(
+    registro_id: int,
+    current_user: usuario = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Elimina un registro del sistema por su ID (solo del usuario autenticado)."""
     result = await db.execute(select(registros).where(registros.id == registro_id))
     db_registro = result.scalar_one_or_none()
     if not db_registro:
         raise HTTPException(status_code=404, detail="Registro no encontrado")
+
+    # Verificar que el registro pertenece al usuario actual
+    if db_registro.usuario_id != current_user.id:
+        raise HTTPException(
+            status_code=403,
+            detail="No tienes permiso para eliminar este registro"
+        )
 
     await db.delete(db_registro)
     await db.commit()
@@ -286,7 +360,6 @@ async def get_progreso_mes(
         progresos_por_registro = {}
 
     # Generar respuesta para cada día del mes
-    dias_semana = ['D', 'L', 'M', 'X', 'J', 'V', 'S']
     resultado = []
 
     fecha_actual = primer_dia
@@ -294,17 +367,24 @@ async def get_progreso_mes(
         fecha_str = fecha_actual.strftime("%Y-%m-%d")
 
         # Calcular día de la semana
-        dia_letra = dias_semana[fecha_actual.weekday() + 1] if fecha_actual.weekday() < 6 else dias_semana[0]
+        dia_letra = obtener_dia_letra(fecha_actual)
 
         # Contar hábitos programados para este día
         habitos_del_dia = []
         for habito in habitos_usuario:
             try:
-                dias_habito = eval(habito.dias)  # Parse JSON string
+                dias_habito = parsear_dias_habito(habito.dias)
+
                 if dia_letra in dias_habito:
                     habitos_del_dia.append(habito.id)
-            except:
-                pass
+
+            except ValueError as e:
+                # Log del error pero continuar con otros hábitos
+                logger.warning(
+                    f"Error parseando días del hábito {habito.id} en calendario: {e}. "
+                    f"Saltando este hábito."
+                )
+                continue
 
         total_habitos = len(habitos_del_dia)
 

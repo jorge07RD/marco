@@ -3,22 +3,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_
 from typing import List
 from datetime import date
-import json
+import logging
 
 from app.database import get_db
 from app.models import habitos, registros, progreso_habitos, usuario
 from app.schemas import HabitoCreate, HabitoUpdate, HabitoResponse
 from app.security import get_current_user
+from app.utils import dia_en_lista, obtener_dia_letra
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/habitos", tags=["habitos"])
-
-
-def get_dia_letra_hoy() -> str:
-    """Retorna la letra del día actual (D, L, M, X, J, V, S)."""
-    dias_semana = ['L', 'M', 'X', 'J', 'V', 'S', 'D']
-    return dias_semana[date.today().weekday()]
-
-
 def dia_en_lista(dias_str: str, dia_letra: str) -> bool:
     """
     Verifica si un día está en la lista de días del hábito.
@@ -193,7 +188,7 @@ async def create_habito(
     await db.flush()  # Para obtener el ID
 
     # Si el día actual está en los días del hábito y está activo, agregarlo al registro de hoy
-    dia_hoy = get_dia_letra_hoy()
+    dia_hoy = obtener_dia_letra(date.today())
     if db_habito.activo and dia_en_lista(db_habito.dias, dia_hoy):
         await agregar_habito_a_registro_hoy(db_habito.id, current_user.id, db)
 
@@ -226,9 +221,9 @@ async def update_habito(
     update_data = habito_data.model_dump(exclude_unset=True)
     for key, value in update_data.items():
         setattr(db_habito, key, value)
-    
+
     # Verificar si cambió la configuración de días o activo
-    dia_hoy = get_dia_letra_hoy()
+    dia_hoy = obtener_dia_letra(date.today())
     estaba_en_hoy = activo_antes and dia_en_lista(dias_antes, dia_hoy)
     esta_en_hoy = db_habito.activo and dia_en_lista(db_habito.dias, dia_hoy)
     
