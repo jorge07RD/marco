@@ -25,26 +25,22 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python 3.11
-        uses: actions/setup-python@v5
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
         with:
-          python-version: "3.11"
-          cache: "pip"
-          cache-dependency-path: backend/pyproject.toml
+          enable-cache: true
+          cache-dependency-glob: "backend/uv.lock"
+
+      - name: Set up Python
+        run: uv python install 3.12
 
       - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -e ".[dev]"
+        run: uv sync --dev
 
       - name: Lint with flake8
         run: |
-          pip install flake8
-          # stop the build if there are Python syntax errors or undefined names
-          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-          # exit-zero treats all errors as warnings
-          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+          uv run flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+          uv run flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
 
       - name: Run tests with pytest
-        run: |
-          pytest -v --tb=short
+        run: uv run pytest -v --tb=short
