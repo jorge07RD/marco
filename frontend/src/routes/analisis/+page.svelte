@@ -682,7 +682,7 @@
   {#if showDateFilter}
     <!-- Overlay -->
     <div
-      class="fixed inset-0 backdrop-blur-md z-[70] flex items-center justify-center p-4 {isClosing ? 'backdrop-blur-0' : ''} transition-all duration-500"
+      class="fixed inset-0 backdrop-blur-md z-[110] flex items-center justify-center p-4 {isClosing ? 'backdrop-blur-0' : ''} transition-all duration-500"
       onclick={handleCloseModal}
       onkeydown={(e) => e.key === 'Escape' && handleCloseModal()}
       role="button"
@@ -982,7 +982,7 @@
   <!-- Floating Action Button (visible en todas las vistas) -->
   <button
     onclick={() => showDateFilter = !showDateFilter}
-    class="fixed bottom-20 md:bottom-6 right-6 w-14 h-14 bg-[#533483] hover:bg-[#7047a8] text-white text-2xl rounded-full shadow-lg shadow-[#533483]/30 flex items-center justify-center transition-all hover:scale-110 z-[60]"
+    class="fixed bottom-20 md:bottom-6 right-6 w-14 h-14 bg-[#533483] hover:bg-[#7047a8] text-white text-2xl rounded-full shadow-lg shadow-[#533483]/30 flex items-center justify-center transition-all hover:scale-110 z-[120]"
     title="Filtrar fechas"
   >
     📅
@@ -991,7 +991,7 @@
   <!-- Modal Fullscreen para Gráficos -->
   {#if fullscreenChart}
     <div
-      class="fixed inset-0 bg-black/95 z-50 flex items-center justify-center p-4 {isClosingFullscreen ? 'opacity-0' : 'opacity-100'} transition-opacity duration-500"
+      class="fixed inset-0 bg-black/95 z-[100] flex items-center justify-center p-4 {isClosingFullscreen ? 'opacity-0' : 'opacity-100'} transition-opacity duration-500"
       onclick={closeFullscreen}
       onkeydown={(e) => e.key === 'Escape' && closeFullscreen()}
       role="button"
