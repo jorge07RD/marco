@@ -322,10 +322,14 @@ async def get_progreso_mes(
     _, ultimo_dia_mes = calendar.monthrange(year, month)
     ultimo_dia = date(year, month, ultimo_dia_mes)
 
-    # Obtener hábitos activos del usuario
+    # Obtener hábitos activos del usuario creados antes del último día del mes
     habitos_result = await db.execute(
         select(habitos).where(
-            and_(habitos.usuario_id == current_user.id, habitos.activo == 1)
+            and_(
+                habitos.usuario_id == current_user.id,
+                habitos.activo == 1,
+                habitos.created_at <= datetime.combine(ultimo_dia, datetime.max.time())
+            )
         )
     )
     habitos_usuario = habitos_result.scalars().all()
@@ -372,6 +376,10 @@ async def get_progreso_mes(
         # Contar hábitos programados para este día
         habitos_del_dia = []
         for habito in habitos_usuario:
+            # Solo considerar el hábito si ya existía en esta fecha
+            if habito.created_at.date() > fecha_actual:
+                continue
+            
             try:
                 dias_habito = parsear_dias_habito(habito.dias)
 

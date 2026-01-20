@@ -79,9 +79,9 @@ async def get_rendimiento_por_dia(
     fechas_result = await db.execute(fechas_query)
     fechas = [row[0] for row in fechas_result.all()]
 
-    # Obtener todos los hábitos del usuario con sus días configurados
+    # Obtener todos los hábitos del usuario con sus días configurados y fecha de creación
     habitos_query = (
-        select(habitos.id, habitos.dias)
+        select(habitos.id, habitos.dias, habitos.created_at)
         .where(habitos.usuario_id == current_user.id)
     )
     habitos_result = await db.execute(habitos_query)
@@ -96,9 +96,10 @@ async def get_rendimiento_por_dia(
             fecha_obj = fecha
 
         # Contar cuántos hábitos aplican para este día de la semana
+        # Solo contar hábitos que ya existían en esa fecha
         habitos_del_dia = sum(
             1 for h in habitos_list
-            if dia_aplica_para_habito(h.dias, fecha_obj)
+            if dia_aplica_para_habito(h.dias, fecha_obj) and h.created_at.date() <= fecha_obj
         )
 
         # Contar hábitos completados ese día
@@ -192,7 +193,8 @@ async def get_cumplimiento_habitos(
             habitos.id,
             habitos.nombre.label('nombre_habito'),
             habitos.color,
-            habitos.dias
+            habitos.dias,
+            habitos.created_at
         )
         .where(habitos.usuario_id == current_user.id)
     )
@@ -215,6 +217,10 @@ async def get_cumplimiento_habitos(
         fecha_primera = None
 
         for fecha in fechas_date:
+            # Verificar si el hábito ya existía en esta fecha
+            if habito.created_at.date() > fecha:
+                continue
+            
             # Verificar si el hábito aplica para este día de la semana
             if not dia_aplica_para_habito(habito.dias, fecha):
                 continue
