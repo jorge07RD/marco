@@ -27,13 +27,14 @@ uv add --dev pytest pytest-asyncio httpx pytest-cov
 ```
 
 **Tests necesarios:**
-- [ ] `tests/test_auth.py` - Registro, login, JWT validation
-- [ ] `tests/test_habitos.py` - CRUD de hábitos con auth
+- [x] `tests/test_auth.py` - Registro, login, JWT validation ✅
+- [x] `tests/test_habitos.py` - CRUD de hábitos con auth ✅
+- [x] `tests/test_categorias.py` - Tests de categorías ✅
 - [ ] `tests/test_registros.py` - Registros diarios y progreso
 - [ ] `tests/test_security.py` - Hash passwords, verify passwords
 - [ ] `tests/test_analisis.py` - Endpoints de análisis
-- [ ] Configurar GitHub Actions para CI
-- [ ] Meta: 80%+ cobertura de código
+- [x] Configurar GitHub Actions para CI ✅
+- [ ] Meta: 80%+ cobertura de código (Parcial - ~1197 líneas de tests)
 
 #### Frontend (Vitest + Testing Library)
 ```bash
@@ -49,6 +50,7 @@ npm install -D vitest @testing-library/svelte @testing-library/jest-dom
 - [ ] Meta: 70%+ cobertura
 
 **Estimación:** 3-5 días
+**Estado:** 🟡 EN PROGRESO (60% completado)
 
 ---
 
@@ -86,9 +88,9 @@ alembic init migrations
 
 **Implementar:**
 
-- [ ] Crear `backend/.env.example` con todas las variables
-- [ ] Mover `SECRET_KEY` a `.env` (nunca en código)
-- [ ] Generar secret seguro: `openssl rand -hex 32`
+- [x] Crear `backend/.env.example` con todas las variables ✅
+- [x] Mover `SECRET_KEY` a `.env` (nunca en código) ✅
+- [x] Generar secret seguro: `openssl rand -hex 32` ✅
 - [ ] Validar que `SECRET_KEY` no sea el valor por defecto en producción
 - [ ] Agregar validación en `app/config.py`:
 
@@ -100,6 +102,7 @@ def __init__(self, **kwargs):
 ```
 
 **Estimación:** 1 hora
+**Estado:** 🟡 PARCIALMENTE COMPLETADO (75% - falta validación en producción)
 
 ---
 
@@ -129,10 +132,14 @@ def setup_logging():
 - [ ] Requests entrantes (middleware)
 - [ ] Errores de autenticación
 - [ ] Operaciones de BD fallidas
-- [ ] Acciones críticas (crear usuario, eliminar hábito)
+- [x] Acciones críticas (parcial - warnings en registros) ✅
 - [ ] Performance metrics (tiempo de respuesta)
+- [ ] Logging estructurado JSON (pythonjsonlogger)
+
+**Nota:** Logging básico implementado en routers (habitos, usuarios, registros, utils), pero falta formato JSON estructurado.
 
 **Estimación:** 1-2 días
+**Estado:** 🟡 PARCIALMENTE COMPLETADO (40% - básico sí, estructurado no)
 
 ---
 
@@ -235,6 +242,7 @@ const API_BASE = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api/v1';
 ```
 
 **Estimación:** 1 hora
+**Estado:** 🟢 COMPLETADO - Prefijo `/api` implementado según commits recientes ✅
 
 ---
 
@@ -347,6 +355,7 @@ services:
 ```
 
 **Estimación:** 2 horas
+**Estado:** 🟢 COMPLETADO ✅
 
 ---
 
@@ -381,6 +390,8 @@ services:
 
 ### 15. CI/CD Pipeline
 
+**Estado:** 🟡 PARCIALMENTE COMPLETADO - Backend ✅, Frontend ❌
+
 **Implementar GitHub Actions:**
 
 ```yaml
@@ -414,6 +425,8 @@ jobs:
         run: cd frontend && npm test
 ```
 
+**Archivo implementado:** `.github/workflows/backend-tests.yml` ✅
+
 **Estimación:** 1 día
 
 ---
@@ -435,40 +448,40 @@ jobs:
 ## 📈 Roadmap Sugerido
 
 ### Semana 1-2: Fundamentos Críticos
-- ✅ Setup de testing (backend + frontend)
-- ✅ Alembic migrations
-- ✅ Secrets management
+- 🟡 Setup de testing (backend ✅ + frontend ❌)
+- ❌ Alembic migrations
+- 🟡 Secrets management (75% completado)
 
 ### Semana 3-4: Seguridad y Calidad
-- ✅ Logging estructurado
-- ✅ Refactor nomenclatura PEP8
-- ✅ SQLAlchemy relationships
-- ✅ Validación de contraseñas
+- 🟡 Logging estructurado (básico ✅, JSON ❌)
+- ❌ Refactor nomenclatura PEP8
+- ❌ SQLAlchemy relationships
+- ❌ Validación de contraseñas
 
 ### Mes 2: Robustez
-- ✅ Rate limiting
-- ✅ Error handling mejorado
+- ❌ Rate limiting
+- ❌ Error handling mejorado
 - ✅ Docker Compose
-- ✅ CI/CD básico
+- 🟡 CI/CD básico (backend ✅, frontend ❌)
 
 ### Mes 3+: Escalabilidad
-- ✅ PostgreSQL migration
-- ✅ Monitoreo
-- ✅ Features adicionales
+- ❌ PostgreSQL migration
+- ❌ Monitoreo
+- ❌ Features adicionales
 
 ---
 
 ## 🎯 Métricas de Éxito
 
-| Métrica | Actual | Objetivo |
-|---------|--------|----------|
-| **Test Coverage Backend** | 0% | 80%+ |
-| **Test Coverage Frontend** | 0% | 70%+ |
-| **Calificación General** | 8.0/10 | 9.5/10 |
-| **Production-Ready Score** | 6.0/10 | 9.0/10 |
-| **Security Score** | 7.5/10 | 9.5/10 |
-| **Tiempo de deploy** | Manual | <5 min (CI/CD) |
-| **Documentación** | 10/10 | 10/10 ✅ |
+| Métrica | Inicial | Actual | Objetivo |
+|---------|---------|--------|----------|
+| **Test Coverage Backend** | 0% | ~50% 🟡 | 80%+ |
+| **Test Coverage Frontend** | 0% | 0% ❌ | 70%+ |
+| **Calificación General** | 8.0/10 | 8.3/10 🟡 | 9.5/10 |
+| **Production-Ready Score** | 6.0/10 | 6.8/10 🟡 | 9.0/10 |
+| **Security Score** | 7.5/10 | 7.8/10 🟡 | 9.5/10 |
+| **Tiempo de deploy** | Manual | Automatizado (backend) 🟡 | <5 min (CI/CD completo) |
+| **Documentación** | 10/10 | 10/10 ✅ | 10/10 ✅ |
 
 ---
 
@@ -508,5 +521,30 @@ Este plan está diseñado para ser **incremental y pragmático**. No intentes ha
 ---
 
 **Creado:** 2025-12-13
-**Última actualización:** 2025-12-13
-**Versión del plan:** 1.0
+**Última actualización:** 2026-01-20
+**Versión del plan:** 1.1
+
+---
+
+## 📝 Resumen de Progreso (2026-01-20)
+
+### ✅ Completadas
+1. **Testing Backend** - Estructura completa de tests (~1197 líneas)
+2. **GitHub Actions CI** - Pipeline automatizado para backend
+3. **Docker Compose** - Orquestación completa backend + frontend
+4. **API Versioning** - Prefijo `/api` implementado
+5. **.env Management** - Archivos .env y .env.example configurados
+
+### 🟡 Parcialmente Completadas
+1. **Secrets Management** - Falta validación de SECRET_KEY en producción (75%)
+2. **Logging** - Básico implementado, falta formato JSON estructurado (40%)
+3. **Test Coverage** - Backend ~50%, Frontend 0%
+
+### ❌ Pendientes Prioritarias
+1. **Alembic Migrations** - Sistema de migraciones de BD
+2. **Nomenclatura PEP8** - Refactorizar clases a PascalCase
+3. **SQLAlchemy Relationships** - Optimizar consultas
+4. **Validación de Contraseñas** - Requisitos de complejidad
+5. **Rate Limiting** - Protección contra fuerza bruta
+6. **Frontend Testing** - Vitest + Testing Library
+7. **Error Handling** - Sistema de excepciones custom
