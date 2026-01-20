@@ -22,7 +22,7 @@ class TestRegister:
     async def test_register_new_user_success(self, test_client: AsyncClient):
         """Test: Debe registrar un nuevo usuario exitosamente."""
         response = await test_client.post(
-            "/auth/register",
+            "/api/auth/register",
             json={
                 "nombre": "nuevo_usuario",
                 "email": "nuevo@example.com",
@@ -60,7 +60,7 @@ class TestRegister:
     ):
         """Test: No debe permitir registrar un email duplicado."""
         response = await test_client.post(
-            "/auth/register",
+            "/api/auth/register",
             json={
                 "nombre": "otro_usuario",
                 "email": "test@example.com",  # Email ya existe
@@ -80,7 +80,7 @@ class TestRegister:
     ):
         """Test: No debe permitir registrar un nombre duplicado."""
         response = await test_client.post(
-            "/auth/register",
+            "/api/auth/register",
             json={
                 "nombre": "test_user",  # Nombre ya existe
                 "email": "otro@example.com",
@@ -96,7 +96,7 @@ class TestRegister:
     async def test_register_invalid_email_fails(self, test_client: AsyncClient):
         """Test: Debe rechazar emails inválidos."""
         response = await test_client.post(
-            "/auth/register",
+            "/api/auth/register",
             json={
                 "nombre": "usuario",
                 "email": "email_invalido",  # Email sin @
@@ -111,7 +111,7 @@ class TestRegister:
     async def test_register_short_password_fails(self, test_client: AsyncClient):
         """Test: Debe rechazar contraseñas cortas (< 8 caracteres)."""
         response = await test_client.post(
-            "/auth/register",
+            "/api/auth/register",
             json={
                 "nombre": "usuario",
                 "email": "user@example.com",
@@ -130,7 +130,7 @@ class TestLogin:
     async def test_login_success(self, test_client: AsyncClient, test_user: usuario):
         """Test: Debe autenticar un usuario con credenciales correctas."""
         response = await test_client.post(
-            "/auth/login",
+            "/api/auth/login",
             json={
                 "identifier": "test@example.com",
                 "password": "TestPassword123"
@@ -158,7 +158,7 @@ class TestLogin:
     ):
         """Test: Debe rechazar contraseña incorrecta."""
         response = await test_client.post(
-            "/auth/login",
+            "/api/auth/login",
             json={
                 "identifier": "test@example.com",
                 "password": "WrongPassword123"
@@ -172,7 +172,7 @@ class TestLogin:
     async def test_login_nonexistent_user_fails(self, test_client: AsyncClient):
         """Test: Debe rechazar email no registrado."""
         response = await test_client.post(
-            "/auth/login",
+            "/api/auth/login",
             json={
                 "identifier": "noexiste@example.com",
                 "password": "SomePassword123"
@@ -186,7 +186,7 @@ class TestLogin:
     async def test_login_invalid_email_format_fails(self, test_client: AsyncClient):
         """Test: Debe rechazar identifier vacío."""
         response = await test_client.post(
-            "/auth/login",
+            "/api/auth/login",
             json={
                 "identifier": "",
                 "password": "SomePassword123"
@@ -207,7 +207,7 @@ class TestGetMe:
         auth_headers: dict
     ):
         """Test: Debe retornar datos del usuario autenticado."""
-        response = await test_client.get("/auth/me", headers=auth_headers)
+        response = await test_client.get("/api/auth/me", headers=auth_headers)
 
         assert response.status_code == 200
         data = response.json()
@@ -226,7 +226,7 @@ class TestGetMe:
     @pytest.mark.asyncio
     async def test_get_me_without_auth_fails(self, test_client: AsyncClient):
         """Test: Debe rechazar petición sin autenticación."""
-        response = await test_client.get("/auth/me")
+        response = await test_client.get("/api/auth/me")
 
         assert response.status_code == 401  # Unauthorized (no hay token)
 
@@ -234,7 +234,7 @@ class TestGetMe:
     async def test_get_me_with_invalid_token_fails(self, test_client: AsyncClient):
         """Test: Debe rechazar token inválido."""
         response = await test_client.get(
-            "/auth/me",
+            "/api/auth/me",
             headers={"Authorization": "Bearer token_invalido"}
         )
 
@@ -253,7 +253,7 @@ class TestUpdateMe:
     ):
         """Test: Debe actualizar el nombre del usuario."""
         response = await test_client.put(
-            "/auth/me",
+            "/api/auth/me",
             headers=auth_headers,
             json={"nombre": "nuevo_nombre"}
         )
@@ -272,7 +272,7 @@ class TestUpdateMe:
     ):
         """Test: Debe actualizar el email del usuario."""
         response = await test_client.put(
-            "/auth/me",
+            "/api/auth/me",
             headers=auth_headers,
             json={"email": "nuevo@example.com"}
         )
@@ -291,7 +291,7 @@ class TestUpdateMe:
     ):
         """Test: Debe actualizar la configuración ver_futuro."""
         response = await test_client.put(
-            "/auth/me",
+            "/api/auth/me",
             headers=auth_headers,
             json={"ver_futuro": True}
         )
@@ -310,7 +310,7 @@ class TestUpdateMe:
     ):
         """Test: No debe permitir cambiar a un email ya en uso."""
         response = await test_client.put(
-            "/auth/me",
+            "/api/auth/me",
             headers=auth_headers,
             json={"email": "future@example.com"}  # Email del otro usuario
         )
@@ -328,7 +328,7 @@ class TestUpdateMe:
     ):
         """Test: No debe permitir cambiar a un nombre ya en uso."""
         response = await test_client.put(
-            "/auth/me",
+            "/api/auth/me",
             headers=auth_headers,
             json={"nombre": "future_user"}  # Nombre del otro usuario
         )
@@ -340,7 +340,7 @@ class TestUpdateMe:
     async def test_update_me_without_auth_fails(self, test_client: AsyncClient):
         """Test: Debe rechazar actualización sin autenticación."""
         response = await test_client.put(
-            "/auth/me",
+            "/api/auth/me",
             json={"nombre": "nuevo_nombre"}
         )
 

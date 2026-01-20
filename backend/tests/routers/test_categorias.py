@@ -20,7 +20,7 @@ class TestGetCategorias:
     @pytest.mark.asyncio
     async def test_get_categorias_empty_list(self, test_client: AsyncClient, auth_headers: dict):
         """Test: Debe retornar lista vacía si no hay categorías."""
-        response = await test_client.get("/categorias/", headers=auth_headers)
+        response = await test_client.get("/api/categorias/", headers=auth_headers)
 
         assert response.status_code == 200
         data = response.json()
@@ -35,7 +35,7 @@ class TestGetCategorias:
         auth_headers: dict
     ):
         """Test: Debe retornar lista de categorías."""
-        response = await test_client.get("/categorias/", headers=auth_headers)
+        response = await test_client.get("/api/categorias/", headers=auth_headers)
 
         assert response.status_code == 200
         data = response.json()
@@ -62,13 +62,13 @@ class TestGetCategorias:
         await test_db_session.commit()
 
         # Test con limit
-        response = await test_client.get("/categorias/?limit=5", headers=auth_headers)
+        response = await test_client.get("/api/categorias/?limit=5", headers=auth_headers)
         assert response.status_code == 200
         data = response.json()
         assert len(data) == 5
 
         # Test con skip y limit
-        response = await test_client.get("/categorias/?skip=5&limit=5", headers=auth_headers)
+        response = await test_client.get("/api/categorias/?skip=5&limit=5", headers=auth_headers)
         assert response.status_code == 200
         data = response.json()
         assert len(data) == 5
@@ -85,7 +85,7 @@ class TestGetCategoria:
         auth_headers: dict
     ):
         """Test: Debe retornar categoría existente."""
-        response = await test_client.get(f"/categorias/{test_categoria.id}", headers=auth_headers)
+        response = await test_client.get(f"/api/categorias/{test_categoria.id}", headers=auth_headers)
 
         assert response.status_code == 200
         data = response.json()
@@ -96,7 +96,7 @@ class TestGetCategoria:
     @pytest.mark.asyncio
     async def test_get_categoria_not_found(self, test_client: AsyncClient, auth_headers: dict):
         """Test: Debe retornar 404 si la categoría no existe."""
-        response = await test_client.get("/categorias/999", headers=auth_headers)
+        response = await test_client.get("/api/categorias/999", headers=auth_headers)
 
         assert response.status_code == 404
         assert "no encontrada" in response.json()["detail"]
@@ -109,7 +109,7 @@ class TestCreateCategoria:
     async def test_create_categoria_success(self, test_client: AsyncClient, auth_headers: dict):
         """Test: Debe crear una nueva categoría."""
         response = await test_client.post(
-            "/categorias/",
+            "/api/categorias/",
             json={"nombre": "Ejercicio"},
             headers=auth_headers
         )
@@ -128,7 +128,7 @@ class TestCreateCategoria:
     ):
         """Test: Debe rechazar nombre vacío."""
         response = await test_client.post(
-            "/categorias/",
+            "/api/categorias/",
             json={"nombre": ""},
             headers=auth_headers
         )
@@ -145,7 +145,7 @@ class TestCreateCategoria:
         nombre_largo = "x" * 150  # Más de 100 caracteres
 
         response = await test_client.post(
-            "/categorias/",
+            "/api/categorias/",
             json={"nombre": nombre_largo},
             headers=auth_headers
         )
@@ -165,7 +165,7 @@ class TestUpdateCategoria:
     ):
         """Test: Debe actualizar una categoría existente."""
         response = await test_client.put(
-            f"/categorias/{test_categoria.id}",
+            f"/api/categorias/{test_categoria.id}",
             json={"nombre": "Salud Mental"},
             headers=auth_headers
         )
@@ -179,7 +179,7 @@ class TestUpdateCategoria:
     async def test_update_categoria_not_found(self, test_client: AsyncClient, auth_headers: dict):
         """Test: Debe retornar 404 al actualizar categoría inexistente."""
         response = await test_client.put(
-            "/categorias/999",
+            "/api/categorias/999",
             json={"nombre": "Nueva"},
             headers=auth_headers
         )
@@ -197,7 +197,7 @@ class TestUpdateCategoria:
         """Test: Debe permitir actualización parcial (solo campos enviados)."""
         # No enviar nada (actualización vacía debería funcionar)
         response = await test_client.put(
-            f"/categorias/{test_categoria.id}",
+            f"/api/categorias/{test_categoria.id}",
             json={},
             headers=auth_headers
         )
@@ -218,18 +218,18 @@ class TestDeleteCategoria:
         auth_headers: dict
     ):
         """Test: Debe eliminar una categoría existente."""
-        response = await test_client.delete(f"/categorias/{test_categoria.id}", headers=auth_headers)
+        response = await test_client.delete(f"/api/categorias/{test_categoria.id}", headers=auth_headers)
 
         assert response.status_code == 204
 
         # Verificar que ya no existe
-        get_response = await test_client.get(f"/categorias/{test_categoria.id}", headers=auth_headers)
+        get_response = await test_client.get(f"/api/categorias/{test_categoria.id}", headers=auth_headers)
         assert get_response.status_code == 404
 
     @pytest.mark.asyncio
     async def test_delete_categoria_not_found(self, test_client: AsyncClient, auth_headers: dict):
         """Test: Debe retornar 404 al eliminar categoría inexistente."""
-        response = await test_client.delete("/categorias/999", headers=auth_headers)
+        response = await test_client.delete("/api/categorias/999", headers=auth_headers)
 
         assert response.status_code == 404
         assert "no encontrada" in response.json()["detail"]
@@ -243,9 +243,9 @@ class TestDeleteCategoria:
     ):
         """Test: Eliminar dos veces la misma categoría debe fallar la segunda vez."""
         # Primera eliminación
-        response = await test_client.delete(f"/categorias/{test_categoria.id}", headers=auth_headers)
+        response = await test_client.delete(f"/api/categorias/{test_categoria.id}", headers=auth_headers)
         assert response.status_code == 204
 
         # Segunda eliminación
-        response = await test_client.delete(f"/categorias/{test_categoria.id}", headers=auth_headers)
+        response = await test_client.delete(f"/api/categorias/{test_categoria.id}", headers=auth_headers)
         assert response.status_code == 404

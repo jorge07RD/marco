@@ -45,7 +45,7 @@ class TestGetHabitos:
     @pytest.mark.asyncio
     async def test_get_habitos_requires_auth(self, test_client: AsyncClient):
         """Test: Debe requerir autenticación."""
-        response = await test_client.get("/habitos/")
+        response = await test_client.get("/api/habitos/")
 
         assert response.status_code == 401  # Unauthorized (no hay token)
 
@@ -56,7 +56,7 @@ class TestGetHabitos:
         auth_headers: dict
     ):
         """Test: Debe retornar lista vacía si el usuario no tiene hábitos."""
-        response = await test_client.get("/habitos/", headers=auth_headers)
+        response = await test_client.get("/api/habitos/", headers=auth_headers)
 
         assert response.status_code == 200
         data = response.json()
@@ -102,7 +102,7 @@ class TestGetHabitos:
         await test_db_session.commit()
 
         # Verificar que solo retorna los propios
-        response = await test_client.get("/habitos/", headers=auth_headers)
+        response = await test_client.get("/api/habitos/", headers=auth_headers)
 
         assert response.status_code == 200
         data = response.json()
@@ -122,7 +122,7 @@ class TestGetHabito:
     ):
         """Test: Debe retornar el hábito solicitado."""
         response = await test_client.get(
-            f"/habitos/{test_habito.id}",
+            f"/api/habitos/{test_habito.id}",
             headers=auth_headers
         )
 
@@ -139,7 +139,7 @@ class TestGetHabito:
         auth_headers: dict
     ):
         """Test: Debe retornar 404 si el hábito no existe."""
-        response = await test_client.get("/habitos/999", headers=auth_headers)
+        response = await test_client.get("/api/habitos/999", headers=auth_headers)
 
         assert response.status_code == 404
 
@@ -170,7 +170,7 @@ class TestGetHabito:
 
         # Intentar obtener hábito de otro usuario
         response = await test_client.get(
-            f"/habitos/{other_habito.id}",
+            f"/api/habitos/{other_habito.id}",
             headers=auth_headers
         )
 
@@ -189,7 +189,7 @@ class TestCreateHabito:
     ):
         """Test: Debe crear un nuevo hábito."""
         response = await test_client.post(
-            "/habitos/",
+            "/api/habitos/",
             headers=auth_headers,
             json={
                 "nombre": "Meditar",
@@ -218,7 +218,7 @@ class TestCreateHabito:
     ):
         """Test: Debe requerir autenticación."""
         response = await test_client.post(
-            "/habitos/",
+            "/api/habitos/",
             json={
                 "nombre": "Meditar",
                 "categoria_id": test_categoria.id,
@@ -245,7 +245,7 @@ class TestCreateHabito:
         se debería validar que la categoría existe antes de crear el hábito.
         """
         response = await test_client.post(
-            "/habitos/",
+            "/api/habitos/",
             headers=auth_headers,
             json={
                 "nombre": "Meditar",
@@ -275,7 +275,7 @@ class TestUpdateHabito:
     ):
         """Test: Debe actualizar un hábito existente."""
         response = await test_client.put(
-            f"/habitos/{test_habito.id}",
+            f"/api/habitos/{test_habito.id}",
             headers=auth_headers,
             json={
                 "nombre": "Correr (Actualizado)",
@@ -296,7 +296,7 @@ class TestUpdateHabito:
     ):
         """Test: Debe retornar 404 al actualizar hábito inexistente."""
         response = await test_client.put(
-            "/habitos/999",
+            "/api/habitos/999",
             headers=auth_headers,
             json={"nombre": "Nuevo"}
         )
@@ -316,7 +316,7 @@ class TestDeleteHabito:
     ):
         """Test: Debe eliminar un hábito existente."""
         response = await test_client.delete(
-            f"/habitos/{test_habito.id}",
+            f"/api/habitos/{test_habito.id}",
             headers=auth_headers
         )
 
@@ -324,7 +324,7 @@ class TestDeleteHabito:
 
         # Verificar que ya no existe
         get_response = await test_client.get(
-            f"/habitos/{test_habito.id}",
+            f"/api/habitos/{test_habito.id}",
             headers=auth_headers
         )
         assert get_response.status_code == 404
@@ -337,7 +337,7 @@ class TestDeleteHabito:
     ):
         """Test: Debe retornar 404 al eliminar hábito inexistente."""
         response = await test_client.delete(
-            "/habitos/999",
+            "/api/habitos/999",
             headers=auth_headers
         )
 
@@ -350,6 +350,6 @@ class TestDeleteHabito:
         test_habito: habitos
     ):
         """Test: Debe requerir autenticación."""
-        response = await test_client.delete(f"/habitos/{test_habito.id}")
+        response = await test_client.delete(f"/api/habitos/{test_habito.id}")
 
         assert response.status_code == 401  # Unauthorized (no hay token)

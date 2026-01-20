@@ -191,7 +191,7 @@ async def auth_token(test_client: AsyncClient, test_user: usuario) -> str:
         str: Token JWT de autenticación
     """
     response = await test_client.post(
-        "/auth/login",
+        "/api/auth/login",
         json={
             "identifier": "test@example.com",
             "password": "TestPassword123"
