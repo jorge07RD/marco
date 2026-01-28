@@ -447,6 +447,33 @@ export async function getProgresoMes(year: number, month: number): Promise<Progr
   return response.json();
 }
 
+/**
+ * Tipo para progreso de un hábito específico en un día
+ */
+export interface ProgresoHabitoDiaCalendario {
+  fecha: string;
+  completado: boolean;
+  programado: boolean;
+}
+
+/**
+ * Obtiene el progreso de un hábito específico para cada día del mes
+ */
+export async function getProgresoMesHabito(
+  year: number,
+  month: number,
+  habitoId: number
+): Promise<ProgresoHabitoDiaCalendario[]> {
+  const response = await fetchConAuth(`/registros/calendario/${year}/${month}/habito/${habitoId}`);
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail || 'Error al obtener progreso del hábito');
+  }
+
+  return response.json();
+}
+
 // ==================== Usuarios API ====================
 
 /**

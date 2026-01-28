@@ -10,7 +10,7 @@ from app.models import registros, progreso_habitos, usuario, habitos
 from app.schemas import (
     RegistroCreate, RegistroUpdate, RegistroResponse, RegistroConProgresos,
     ProgresoHabitoCreate, ProgresoHabitoUpdate, ProgresoHabitoResponse,
-    ProgresoDiaCalendario
+    ProgresoDiaCalendario, ProgresoHabitoDiaCalendario
 )
 from app.security import get_current_user
 from app.utils import parsear_dias_habito, obtener_dia_letra
@@ -415,6 +415,117 @@ async def get_progreso_mes(
             habitos_completados=habitos_completados,
             porcentaje=round(porcentaje, 1),
             tiene_registro=tiene_registro
+        ))
+
+        fecha_actual += timedelta(days=1)
+
+    return resultado
+
+
+@router.get("/calendario/{year}/{month}/habito/{habito_id}", response_model=List[ProgresoHabitoDiaCalendario])
+async def get_progreso_mes_habito(
+    year: int,
+    month: int,
+    habito_id: int,
+    current_user: usuario = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Obtiene el progreso de un hábito específico para cada día del mes.
+
+    Args:
+        year: Año del calendario
+        month: Mes del calendario (1-12)
+        habito_id: ID del hábito a consultar
+        current_user: Usuario autenticado
+        db: Sesión de base de datos
+
+    Returns:
+        Lista con progreso diario del hábito en el mes
+    """
+    import calendar
+    from datetime import timedelta
+
+    # Validar mes
+    if month < 1 or month > 12:
+        raise HTTPException(status_code=400, detail="Mes inválido. Debe estar entre 1 y 12")
+
+    # Verificar que el hábito pertenece al usuario
+    habito_result = await db.execute(
+        select(habitos).where(
+            and_(
+                habitos.id == habito_id,
+                habitos.usuario_id == current_user.id
+            )
+        )
+    )
+    habito = habito_result.scalar_one_or_none()
+    
+    if not habito:
+        raise HTTPException(status_code=404, detail="Hábito no encontrado")
+
+    # Calcular primer y último día del mes
+    primer_dia = date(year, month, 1)
+    _, ultimo_dia_mes = calendar.monthrange(year, month)
+    ultimo_dia = date(year, month, ultimo_dia_mes)
+
+    # Parsear días del hábito
+    try:
+        dias_habito = parsear_dias_habito(habito.dias)
+    except ValueError as e:
+        logger.error(f"Error parseando días del hábito {habito_id}: {e}")
+        raise HTTPException(status_code=500, detail="Error al procesar los días del hábito")
+
+    # Obtener todos los registros del mes
+    registros_result = await db.execute(
+        select(registros).where(
+            and_(
+                registros.usuario_id == current_user.id,
+                registros.fecha >= primer_dia.strftime("%Y-%m-%d"),
+                registros.fecha <= ultimo_dia.strftime("%Y-%m-%d")
+            )
+        )
+    )
+    registros_mes = {r.fecha: r for r in registros_result.scalars().all()}
+
+    # Obtener progresos del hábito específico
+    progresos_por_fecha = {}
+    if registros_mes:
+        registro_ids = [r.id for r in registros_mes.values()]
+        progresos_result = await db.execute(
+            select(progreso_habitos).where(
+                and_(
+                    progreso_habitos.registro_id.in_(registro_ids),
+                    progreso_habitos.habito_id == habito_id
+                )
+            )
+        )
+        for p in progresos_result.scalars().all():
+            # Encontrar la fecha del registro
+            for fecha, reg in registros_mes.items():
+                if reg.id == p.registro_id:
+                    progresos_por_fecha[fecha] = p
+                    break
+
+    # Generar respuesta para cada día del mes
+    resultado = []
+    fecha_actual = primer_dia
+
+    while fecha_actual <= ultimo_dia:
+        fecha_str = fecha_actual.strftime("%Y-%m-%d")
+        dia_letra = obtener_dia_letra(fecha_actual)
+        
+        # Verificar si el hábito está programado para este día
+        programado = dia_letra in dias_habito and habito.created_at.date() <= fecha_actual
+        
+        # Verificar si fue completado
+        progreso = progresos_por_fecha.get(fecha_str)
+        completado = progreso.completado if progreso else False
+
+        resultado.append(ProgresoHabitoDiaCalendario(
+            fecha=fecha_str,
+            completado=completado,
+            programado=programado
         ))
 
         fecha_actual += timedelta(days=1)

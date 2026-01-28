@@ -1,14 +1,23 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
-  import { getProgresoMes, getRegistroPorFecha } from '$lib/api';
-  import type { ProgresoDiaCalendario } from '$lib/api';
+  import { getProgresoMes, getRegistroPorFecha, getHabitos, getProgresoMesHabito } from '$lib/api';
+  import type { ProgresoDiaCalendario, Habito, ProgresoHabitoDiaCalendario } from '$lib/api';
 
   // Estado del calendario
   let currentDate = $state(new Date());
   let progresoMes = $state<ProgresoDiaCalendario[]>([]);
+  let progresoHabitosMes = $state<Map<number, ProgresoHabitoDiaCalendario[]>>(new Map());
   let loading = $state(true);
   let error = $state<string | null>(null);
+
+  // Estado para filtro de hábitos (ahora es un array para múltiple selección)
+  let habitos = $state<Habito[]>([]);
+  let habitosSeleccionados = $state<number[]>([]);
+  let loadingHabitos = $state(false);
+
+  // Estado para menú desplegable en móvil
+  let mostrarFiltros = $state(false);
 
   // Estados para secciones colapsables
   let mostrarLeyenda = $state(false);
@@ -23,6 +32,7 @@
 
   // Cargar datos del mes al montar o cambiar fecha
   onMount(() => {
+    cargarHabitos();
     cargarProgresoMes();
   });
 
@@ -31,18 +41,93 @@
     cargarProgresoMes();
   });
 
+  $effect(() => {
+    // Recargar cuando cambien los hábitos seleccionados
+    if (habitosSeleccionados.length > 0) {
+      cargarProgresoHabitos();
+    }
+  });
+
+  async function cargarHabitos() {
+    try {
+      loadingHabitos = true;
+      habitos = await getHabitos();
+    } catch (err) {
+      console.error('Error al cargar hábitos:', err);
+    } finally {
+      loadingHabitos = false;
+    }
+  }
+
   async function cargarProgresoMes() {
     try {
       loading = true;
       error = null;
       // month es 0-11, el backend espera 1-12
       progresoMes = await getProgresoMes(year, month + 1);
+      
+      // Si hay hábitos seleccionados, cargar su progreso también
+      if (habitosSeleccionados.length > 0) {
+        await cargarProgresoHabitos();
+      }
     } catch (err) {
       error = err instanceof Error ? err.message : 'Error al cargar progreso del mes';
     } finally {
       loading = false;
     }
   }
+
+  async function cargarProgresoHabitos() {
+    if (habitosSeleccionados.length === 0) return;
+    
+    try {
+      const nuevoMapa = new Map<number, ProgresoHabitoDiaCalendario[]>();
+      
+      // Cargar progreso de cada hábito seleccionado en paralelo
+      const promesas = habitosSeleccionados.map(async (habitoId) => {
+        const progreso = await getProgresoMesHabito(year, month + 1, habitoId);
+        return { habitoId, progreso };
+      });
+      
+      const resultados = await Promise.all(promesas);
+      
+      for (const { habitoId, progreso } of resultados) {
+        nuevoMapa.set(habitoId, progreso);
+      }
+      
+      progresoHabitosMes = nuevoMapa;
+    } catch (err) {
+      console.error('Error al cargar progreso de los hábitos:', err);
+    }
+  }
+
+  function toggleHabito(habitoId: number) {
+    if (habitosSeleccionados.includes(habitoId)) {
+      habitosSeleccionados = habitosSeleccionados.filter(id => id !== habitoId);
+    } else {
+      habitosSeleccionados = [...habitosSeleccionados, habitoId];
+    }
+    
+    if (habitosSeleccionados.length === 0) {
+      progresoHabitosMes = new Map();
+    }
+  }
+
+  function limpiarSeleccion() {
+    habitosSeleccionados = [];
+    progresoHabitosMes = new Map();
+  }
+
+  function seleccionarTodosHabitos() {
+    const activos = habitos.filter(h => h.activo === 1).map(h => h.id);
+    habitosSeleccionados = activos;
+  }
+
+  // Obtener los hábitos seleccionados actuales
+  let habitosActuales = $derived(habitos.filter(h => habitosSeleccionados.includes(h.id)));
+  
+  // Verificar si hay filtro activo
+  let hayFiltroActivo = $derived(habitosSeleccionados.length > 0);
 
   // Navegación entre meses
   function mesAnterior() {
@@ -100,6 +185,32 @@
   }
 
   let diasCalendario = $derived(construirCalendario());
+
+  // Obtener el progreso de todos los hábitos seleccionados para una fecha específica
+  function getProgresoHabitosPorFecha(fecha: string): { habito: Habito; progreso: ProgresoHabitoDiaCalendario | undefined }[] {
+    return habitosActuales.map(habito => {
+      const progresoArray = progresoHabitosMes.get(habito.id);
+      const progreso = progresoArray?.find(p => p.fecha === fecha);
+      return { habito, progreso };
+    });
+  }
+
+  // Calcular estado combinado de múltiples hábitos para una fecha
+  function getEstadoCombinado(fecha: string): { 
+    todosProgramados: number;
+    completados: number;
+    hayProgramado: boolean;
+  } {
+    const progresos = getProgresoHabitosPorFecha(fecha);
+    const programados = progresos.filter(p => p.progreso?.programado);
+    const completados = programados.filter(p => p.progreso?.completado);
+    
+    return {
+      todosProgramados: programados.length,
+      completados: completados.length,
+      hayProgramado: programados.length > 0
+    };
+  }
 
   // Helper para parsear fecha YYYY-MM-DD como fecha local (no UTC)
   function parsearFechaLocal(fechaStr: string): Date {
@@ -178,6 +289,111 @@
     </div>
   </div>
 
+  <!-- Filtro de Hábitos -->
+  <div class="bg-bg_secondary border border-border rounded-lg mb-4 md:mb-6 overflow-hidden">
+    <!-- Header del filtro (siempre visible) -->
+    <button
+      onclick={() => (mostrarFiltros = !mostrarFiltros)}
+      class="w-full p-3 sm:p-4 flex items-center justify-between touch-manipulation sm:cursor-default"
+    >
+      <div class="flex items-center gap-2">
+        <span class="text-sm text-text_secondary">🔍 Filtrar por hábito</span>
+        {#if habitosSeleccionados.length > 0}
+          <span class="bg-[#e94560] text-white text-xs px-2 py-0.5 rounded-full">
+            {habitosSeleccionados.length}
+          </span>
+        {/if}
+      </div>
+      <span class="text-text_secondary sm:hidden transition-transform duration-200 {mostrarFiltros ? 'rotate-180' : ''}">
+        ▼
+      </span>
+    </button>
+
+    <!-- Contenido del filtro (desplegable en móvil, siempre visible en desktop) -->
+    <div class="{mostrarFiltros ? 'block' : 'hidden'} sm:block px-3 sm:px-4 pb-3 sm:pb-4 border-t border-border sm:border-t-0">
+      <!-- Botones de acción rápida -->
+      <div class="flex flex-wrap gap-2 mb-3 pt-3 sm:pt-0">
+        <button
+          onclick={limpiarSeleccion}
+          class="px-3 py-2 rounded-md text-sm font-medium transition-all touch-manipulation
+                 {habitosSeleccionados.length === 0 
+                   ? 'bg-[#e94560] text-white ring-2 ring-[#e94560]/50' 
+                   : 'bg-[#1a1a1a] border border-[#533483] text-text_secondary hover:text-white hover:border-[#e94560]'}"
+        >
+          📊 Vista general
+        </button>
+        <button
+          onclick={seleccionarTodosHabitos}
+          class="px-3 py-2 rounded-md text-sm font-medium transition-all touch-manipulation
+                 bg-[#1a1a1a] border border-[#533483] text-text_secondary hover:text-white hover:border-[#e94560]"
+        >
+          ✓ Todos
+        </button>
+      </div>
+
+      <!-- Grid de hábitos con checkboxes para fácil selección múltiple -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+        {#each habitos.filter(h => h.activo === 1) as habito (habito.id)}
+          {@const isSelected = habitosSeleccionados.includes(habito.id)}
+          <button
+            onclick={() => toggleHabito(habito.id)}
+            class="p-3 rounded-lg text-sm font-medium transition-all touch-manipulation flex items-center gap-3
+                   {isSelected 
+                     ? 'ring-2 ring-offset-2 ring-offset-bg_secondary' 
+                     : 'bg-[#1a1a1a] border border-[#533483] hover:border-white/30'}"
+            style={isSelected 
+              ? `background-color: ${habito.color}; ring-color: ${habito.color}` 
+              : ''}
+          >
+            <!-- Checkbox visual -->
+            <div 
+              class="w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors
+                     {isSelected ? 'border-white bg-white/20' : 'border-[#533483]'}"
+            >
+              {#if isSelected}
+                <span class="text-white text-xs">✓</span>
+              {/if}
+            </div>
+            
+            <!-- Color del hábito -->
+            <span 
+              class="w-4 h-4 rounded flex-shrink-0" 
+              style="background-color: {habito.color}"
+            ></span>
+            
+            <!-- Nombre del hábito -->
+            <span class="truncate {isSelected ? 'text-white' : 'text-text_secondary'}">{habito.nombre}</span>
+          </button>
+        {/each}
+      </div>
+    </div>
+    
+    <!-- Resumen de selección -->
+    {#if habitosSeleccionados.length > 0}
+      <div class="px-3 sm:px-4 pb-3 sm:pb-4 pt-3 border-t border-border">
+        <div class="flex flex-wrap items-center gap-2 text-sm">
+          <span class="text-white font-medium">Viendo:</span>
+          <div class="flex flex-wrap gap-1">
+            {#each habitosActuales as habito (habito.id)}
+              <span 
+                class="inline-flex items-center gap-1 px-2 py-1 rounded text-xs text-white"
+                style="background-color: {habito.color}"
+              >
+                {habito.nombre}
+                <button 
+                  onclick={(e) => { e.stopPropagation(); toggleHabito(habito.id); }}
+                  class="ml-1 hover:bg-white/20 rounded-full w-4 h-4 flex items-center justify-center"
+                >
+                  ×
+                </button>
+              </span>
+            {/each}
+          </div>
+        </div>
+      </div>
+    {/if}
+  </div>
+
   <!-- Error -->
   {#if error}
     <div class="bg-red-500/10 border border-red-500 text-red-500 p-4 rounded-md mb-6">
@@ -224,8 +440,55 @@
           {#if dia === null}
             <!-- Día vacío (de otro mes) -->
             <div class="aspect-square"></div>
+          {:else if hayFiltroActivo}
+            <!-- Vista filtrada por hábitos: muestra cuadrados de colores -->
+            {@const progresos = getProgresoHabitosPorFecha(dia.fecha)}
+            {@const estado = getEstadoCombinado(dia.fecha)}
+            <button
+              onclick={() => irADia(dia.fecha)}
+              class="aspect-square border border-[#533483] rounded-md p-1
+                     hover:scale-105 active:scale-95
+                     transition-all min-h-[44px] touch-manipulation flip-in-hor-bottom
+                     {esHoy(dia.fecha) ? 'ring-2 ring-[#e94560]' : ''}
+                     {estado.hayProgramado 
+                       ? (estado.completados === estado.todosProgramados ? 'bg-green-900/30' : 'bg-[#1a1a1a]')
+                       : 'bg-[#1a1a1a]'}"
+              style="animation-delay: {i * 0.02}s;"
+              title={estado.hayProgramado 
+                ? `${estado.completados}/${estado.todosProgramados} completados` 
+                : 'No programado'}
+            >
+              <div class="h-full flex flex-col justify-between">
+                <!-- Número del día -->
+                <span
+                  class="font-semibold leading-none {esHoy(dia.fecha)
+                    ? 'text-[#e94560] text-xs sm:text-sm'
+                    : 'text-white text-[10px] sm:text-xs'}"
+                >
+                  {parsearFechaLocal(dia.fecha).getDate()}
+                </span>
+
+                <!-- Grid de cuadrados de colores de hábitos -->
+                {#if estado.hayProgramado}
+                  <div class="mt-auto flex flex-wrap justify-center gap-0.5">
+                    {#each progresos.filter(p => p.progreso?.programado) as { habito, progreso } (habito.id)}
+                      <div 
+                        class="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-sm transition-all"
+                        style="background-color: {progreso?.completado ? habito.color : `${habito.color}40`};
+                               border: 1px solid {habito.color};"
+                        title="{habito.nombre}: {progreso?.completado ? '✓' : '○'}"
+                      ></div>
+                    {/each}
+                  </div>
+                {:else}
+                  <div class="mt-auto text-center text-[8px] text-text_secondary opacity-50">
+                    —
+                  </div>
+                {/if}
+              </div>
+            </button>
           {:else}
-            <!-- Día del mes -->
+            <!-- Vista general: todos los hábitos -->
             <button
               onclick={() => irADia(dia.fecha)}
               class="aspect-square border border-[#533483] rounded-md p-1 sm:p-2
@@ -295,32 +558,65 @@
         </button>
 
         {#if mostrarLeyenda}
-          <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3 text-[10px] sm:text-xs mt-2 sm:mt-3 animate-slide-down">
-            <div class="flex items-center gap-1.5 sm:gap-2">
-              <div class="w-3 h-3 sm:w-4 sm:h-4 bg-[#1a1a1a] border border-[#533483] rounded flex-shrink-0"></div>
-              <span class="text-text_secondary truncate">Sin progreso</span>
+          {#if hayFiltroActivo}
+            <!-- Leyenda para vista filtrada por hábitos -->
+            <div class="mt-2 sm:mt-3 animate-slide-down">
+              <p class="text-[10px] sm:text-xs text-text_secondary mb-2">Cada cuadrado representa un hábito:</p>
+              <div class="flex flex-wrap gap-2 mb-3">
+                {#each habitosActuales as habito (habito.id)}
+                  <div class="flex items-center gap-1.5">
+                    <div 
+                      class="w-3 h-3 sm:w-4 sm:h-4 rounded-sm"
+                      style="background-color: {habito.color}"
+                    ></div>
+                    <span class="text-[10px] sm:text-xs text-text_secondary">{habito.nombre}</span>
+                  </div>
+                {/each}
+              </div>
+              <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 text-[10px] sm:text-xs border-t border-border pt-2">
+                <div class="flex items-center gap-1.5">
+                  <div class="w-3 h-3 sm:w-4 sm:h-4 rounded-sm bg-green-500 border border-green-500"></div>
+                  <span class="text-text_secondary">Completado</span>
+                </div>
+                <div class="flex items-center gap-1.5">
+                  <div class="w-3 h-3 sm:w-4 sm:h-4 rounded-sm bg-green-500/30 border border-green-500"></div>
+                  <span class="text-text_secondary">Pendiente</span>
+                </div>
+                <div class="flex items-center gap-1.5">
+                  <div class="w-3 h-3 sm:w-4 sm:h-4 rounded-sm bg-[#1a1a1a] border border-[#533483]"></div>
+                  <span class="text-text_secondary">No programado</span>
+                </div>
+              </div>
             </div>
-            <div class="flex items-center gap-1.5 sm:gap-2">
-              <div class="w-3 h-3 sm:w-4 sm:h-4 bg-red-900/40 border border-[#533483] rounded flex-shrink-0"></div>
-              <span class="text-text_secondary truncate">{'< 25%'}</span>
+          {:else}
+            <!-- Leyenda para vista general -->
+            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3 text-[10px] sm:text-xs mt-2 sm:mt-3 animate-slide-down">
+              <div class="flex items-center gap-1.5 sm:gap-2">
+                <div class="w-3 h-3 sm:w-4 sm:h-4 bg-[#1a1a1a] border border-[#533483] rounded flex-shrink-0"></div>
+                <span class="text-text_secondary truncate">Sin progreso</span>
+              </div>
+              <div class="flex items-center gap-1.5 sm:gap-2">
+                <div class="w-3 h-3 sm:w-4 sm:h-4 bg-red-900/40 border border-[#533483] rounded flex-shrink-0"></div>
+                <span class="text-text_secondary truncate">{'< 25%'}</span>
+              </div>
+              <div class="flex items-center gap-1.5 sm:gap-2">
+                <div class="w-3 h-3 sm:w-4 sm:h-4 bg-orange-900/40 border border-[#533483] rounded flex-shrink-0"></div>
+                <span class="text-text_secondary truncate">25-49%</span>
+              </div>
+              <div class="flex items-center gap-1.5 sm:gap-2">
+                <div class="w-3 h-3 sm:w-4 sm:h-4 bg-yellow-900/40 border border-[#533483] rounded flex-shrink-0"></div>
+                <span class="text-text_secondary truncate">50-74%</span>
+              </div>
+              <div class="flex items-center gap-1.5 sm:gap-2">
+                <div class="w-3 h-3 sm:w-4 sm:h-4 bg-blue-900/40 border border-[#533483] rounded flex-shrink-0"></div>
+                <span class="text-text_secondary truncate">75-99%</span>
+              </div>
+              <div class="flex items-center gap-1.5 sm:gap-2">
+                <div class="w-3 h-3 sm:w-4 sm:h-4 bg-green-900/50 border border-[#533483] rounded flex-shrink-0"></div>
+                <span class="text-text_secondary truncate">100%</span>
+              </div>
             </div>
-            <div class="flex items-center gap-1.5 sm:gap-2">
-              <div class="w-3 h-3 sm:w-4 sm:h-4 bg-orange-900/40 border border-[#533483] rounded flex-shrink-0"></div>
-              <span class="text-text_secondary truncate">25-49%</span>
-            </div>
-            <div class="flex items-center gap-1.5 sm:gap-2">
-              <div class="w-3 h-3 sm:w-4 sm:h-4 bg-yellow-900/40 border border-[#533483] rounded flex-shrink-0"></div>
-              <span class="text-text_secondary truncate">50-74%</span>
-            </div>
-            <div class="flex items-center gap-1.5 sm:gap-2">
-              <div class="w-3 h-3 sm:w-4 sm:h-4 bg-blue-900/40 border border-[#533483] rounded flex-shrink-0"></div>
-              <span class="text-text_secondary truncate">75-99%</span>
-            </div>
-            <div class="flex items-center gap-1.5 sm:gap-2">
-              <div class="w-3 h-3 sm:w-4 sm:h-4 bg-green-900/50 border border-[#533483] rounded flex-shrink-0"></div>
-              <span class="text-text_secondary truncate">100%</span>
-            </div>
-          </div>
+          {/if}
         {/if}
       </div>
     </div>
@@ -344,6 +640,7 @@
         <li class="hidden sm:list-item">Los colores indican el porcentaje de hábitos completados</li>
         <li>El borde rojo indica el día actual</li>
         <li class="hidden sm:list-item">Usa las flechas para navegar entre meses</li>
+        <li>Filtra por hábito para ver su progreso individual</li>
       </ul>
     {/if}
   </div>

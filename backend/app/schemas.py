@@ -293,3 +293,12 @@ class ProgresoDiaCalendario(BaseModel):
     tiene_registro: bool  # Si existe un registro para ese día
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class ProgresoHabitoDiaCalendario(BaseModel):
+    """Esquema para mostrar si un hábito específico fue completado en un día."""
+    fecha: str  # Formato YYYY-MM-DD
+    completado: bool  # Si el hábito fue completado ese día
+    programado: bool  # Si el hábito estaba programado para ese día
+
+    model_config = ConfigDict(from_attributes=True)
