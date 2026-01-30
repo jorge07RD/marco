@@ -6,13 +6,16 @@
     getRegistroPorFecha,
     verificarRegistroExiste,
     deleteRegistro,
+    getCategorias,
     type Habito,
+    type Categoria,
   } from "$lib/api";
   import { authStore } from "$lib/stores/auth.svelte";
   import HabitoForm from "$lib/components/HabitoForm.svelte";
   import ConfirmModal from "$lib/components/ConfirmModal.svelte";
 
   let habitos = $state<Habito[]>([]);
+  let categorias = $state<Categoria[]>([]);
   let loading = $state(true);
   let error = $state<string | null>(null);
   let creandoRegistro = $state(false);
@@ -28,9 +31,22 @@
   let habitoToDelete = $state<Habito | null>(null);
 
   onMount(async () => {
-    await loadHabitos();
+    await Promise.all([loadHabitos(), loadCategorias()]);
     await verificarRegistroHoy();
   });
+
+  async function loadCategorias() {
+    try {
+      categorias = await getCategorias();
+    } catch {
+      categorias = [];
+    }
+  }
+
+  function getCategoriaNombre(categoriaId: number): string {
+    const categoria = categorias.find(c => c.id === categoriaId);
+    return categoria?.nombre || `Categoría ${categoriaId}`;
+  }
 
   // Verificar si ya existe un registro para hoy
   async function verificarRegistroHoy() {
@@ -349,7 +365,7 @@
           <div
             class="mr-auto grid w-auto text-border border border-border justify-center text-xs p-2 rounded-sm bg-[#121127]"
           >
-            Categoría {habito.categoria_id}
+            {getCategoriaNombre(habito.categoria_id)}
           </div>
           <!-- meta diaria -->
           <div

@@ -471,7 +471,7 @@
 
 <!-- Modal para verificar contraseña -->
 {#if showPasswordModal}
-  <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+  <div class="fixed inset-0 bg-[#0E0D0D] flex items-center justify-center z-50 p-4">
     <div class="bg-bg_secondary border border-border rounded-lg p-6 max-w-md w-full">
       <h3 class="text-xl font-semibold text-text_primary mb-4">🔐 Verificar identidad</h3>
       <p class="text-text_secondary mb-4">Por seguridad, ingresa tu contraseña para continuar.</p>
@@ -509,52 +509,53 @@
 
 <!-- Modal para opciones de eliminación -->
 {#if showDeleteOptions}
-  <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+  <div class="fixed inset-0 bg-[#0E0D0D] flex items-center justify-center z-50 p-4">
     <div class="bg-bg_secondary border border-border rounded-lg p-6 max-w-md w-full">
-      <h3 class="text-xl font-semibold text-text_primary mb-4">⚠️ Eliminar datos</h3>
-      <p class="text-text_secondary mb-6">¿Qué deseas eliminar?</p>
-      
-      {#if deleteMessage}
-        <p class="text-sm mb-4 {deleteMessage.startsWith('✅') ? 'text-success' : 'text-accent'}">
-          {deleteMessage}
-        </p>
-      {/if}
-      
-      <div class="space-y-3">
-        <button
-          onclick={handleEliminarSoloRegistros}
-          disabled={deletingData}
-          class="w-full py-3 px-4 rounded border border-warning text-warning hover:bg-warning/10 transition-colors disabled:opacity-50"
-        >
-          {#if deletingData}
-            ⏳ Eliminando...
-          {:else}
+      {#if deletingData}
+        <!-- Indicador de carga -->
+        <div class="flex flex-col items-center justify-center py-8">
+          <div class="w-12 h-12 border-4 border-accent border-t-transparent rounded-full animate-spin mb-4"></div>
+          <p class="text-text_primary font-medium">Eliminando datos...</p>
+          <p class="text-text_secondary text-sm mt-2">Por favor espera</p>
+        </div>
+      {:else}
+        <h3 class="text-xl font-semibold text-text_primary mb-4">⚠️ Eliminar datos</h3>
+        <p class="text-text_secondary mb-6">¿Qué deseas eliminar?</p>
+        
+        {#if deleteMessage}
+          <p class="text-sm mb-4 {deleteMessage.startsWith('✅') ? 'text-success' : 'text-accent'}">
+            {deleteMessage}
+          </p>
+        {/if}
+        
+        <div class="space-y-3">
+          <button
+            onclick={handleEliminarSoloRegistros}
+            disabled={deletingData}
+            class="w-full py-3 px-4 rounded border border-warning text-warning hover:bg-warning/10 transition-colors disabled:opacity-50"
+          >
             📊 Solo registros y progresos
-          {/if}
-        </button>
-        <p class="text-text_secondary text-xs px-2">Elimina todo el historial de registros pero mantiene tu cuenta y hábitos.</p>
+          </button>
+          <p class="text-text_secondary text-xs px-2">Elimina todo el historial de registros pero mantiene tu cuenta y hábitos.</p>
+          
+          <button
+            onclick={handleEliminarCuenta}
+            disabled={deletingData}
+            class="w-full py-3 px-4 rounded border border-accent text-accent hover:bg-accent/10 transition-colors disabled:opacity-50"
+          >
+            👤 Eliminar cuenta completa
+          </button>
+          <p class="text-text_secondary text-xs px-2">Elimina tu cuenta y todos los datos asociados. Esta acción es irreversible.</p>
+        </div>
         
         <button
-          onclick={handleEliminarCuenta}
+          onclick={cancelarDeleteOptions}
           disabled={deletingData}
-          class="w-full py-3 px-4 rounded border border-accent text-accent hover:bg-accent/10 transition-colors disabled:opacity-50"
+          class="w-full mt-6 py-2 px-4 rounded border border-border text-text_secondary hover:border-accent hover:text-accent transition-colors disabled:opacity-50"
         >
-          {#if deletingData}
-            ⏳ Eliminando...
-          {:else}
-            👤 Eliminar cuenta completa
-          {/if}
+          Cancelar
         </button>
-        <p class="text-text_secondary text-xs px-2">Elimina tu cuenta y todos los datos asociados. Esta acción es irreversible.</p>
-      </div>
-      
-      <button
-        onclick={cancelarDeleteOptions}
-        disabled={deletingData}
-        class="w-full mt-6 py-2 px-4 rounded border border-border text-text_secondary hover:border-accent hover:text-accent transition-colors disabled:opacity-50"
-      >
-        Cancelar
-      </button>
+      {/if}
     </div>
   </div>
 {/if}

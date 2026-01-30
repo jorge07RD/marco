@@ -811,8 +811,9 @@
     <!-- Estado vacío -->
     <div class="max-w-[95vw] mx-auto">
       <div class="bg-[#1a1a1a] border-2 border-dashed border-[#533483] rounded-lg p-8 text-center">
-        <p class="text-xl text-[#A0A0A0] mb-2">📭 No hay hábitos</p>
-        <p class="text-[#A0A0A0] text-sm">Presiona + para agregar uno</p>
+        <p class="text-xl text-[#A0A0A0] mb-2">� Sin datos suficientes</p>
+        <p class="text-[#A0A0A0] text-sm italic">"El que mide su progreso, domina su destino"</p>
+        <p class="text-[#666] text-xs mt-4">Crea hábitos y registra tu progreso para ver el análisis</p>
       </div>
     </div>
   {:else}
@@ -841,7 +842,7 @@
         <!-- Fila 1: Rendimiento Area + Polar -->
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
           <div
-            class="lg:col-span-2 bg-[#1a1a1a] border border-[#533483] rounded-lg p-4 h-96 md:h-[500px] lg:h-[600px] slide-in-blurred-bottom relative"
+            class="lg:col-span-2 bg-[#1a1a1a] border border-[#533483] rounded-lg p-4 h-96 md:h-[500px] lg:h-[600px] slide-in-blurred-left relative"
             style="animation-delay: 0.3s;"
           >
             <!-- Botón expandir -->
@@ -877,7 +878,7 @@
         <!-- Fila 2: Pie + Spline -->
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
           <div
-            class="bg-[#1a1a1a] border border-[#533483] rounded-lg p-4 h-96 md:h-[500px] lg:h-[600px] slide-in-blurred-bottom relative"
+            class="bg-[#1a1a1a] border border-[#533483] rounded-lg p-4 h-96 md:h-[500px] lg:h-[600px] roll-in-blurred-left relative"
             style="animation-delay: 0.5s;"
           >
             <button
@@ -892,7 +893,7 @@
             <div id="chart-pie" class="w-full h-full"></div>
           </div>
           <div
-            class="lg:col-span-2 bg-[#1a1a1a] border border-[#533483] rounded-lg p-4 h-96 md:h-[500px] lg:h-[600px] slide-in-blurred-bottom relative"
+            class="lg:col-span-2 bg-[#1a1a1a] border border-[#533483] rounded-lg p-4 h-96 md:h-[500px] lg:h-[600px] slide-in-blurred-left relative"
             style="animation-delay: 0.6s;"
           >
             <button
@@ -926,7 +927,7 @@
             <div id="chart-column" class="w-full h-full"></div>
           </div>
           <div
-            class="bg-[#1a1a1a] border border-[#533483] rounded-lg p-4 h-96 md:h-[500px] lg:h-[600px] slide-in-blurred-bottom relative"
+            class="bg-[#1a1a1a] border border-[#533483] rounded-lg p-4 h-96 md:h-[500px] lg:h-[600px] slide-in-fwd-center relative"
             style="animation-delay: 0.8s;"
           >
             <button
@@ -945,7 +946,7 @@
         <!-- Fila 4: Radar + Bar -->
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
           <div
-            class="bg-[#1a1a1a] border border-[#533483] rounded-lg p-4 h-96 md:h-[500px] lg:h-[600px] slide-in-blurred-bottom relative"
+            class="bg-[#1a1a1a] border border-[#533483] rounded-lg p-4 h-96 md:h-[500px] lg:h-[600px] slide-in-fwd-center relative"
             style="animation-delay: 0.9s;"
           >
             <button
@@ -960,7 +961,7 @@
             <div id="chart-radar" class="w-full h-full"></div>
           </div>
           <div
-            class="lg:col-span-2 bg-[#1a1a1a] border border-[#533483] rounded-lg p-4 h-96 md:h-[500px] lg:h-[600px] slide-in-blurred-bottom relative"
+            class="lg:col-span-2 bg-[#1a1a1a] border border-[#533483] rounded-lg p-4 h-96 md:h-[500px] lg:h-[600px] slide-in-blurred-left relative"
             style="animation-delay: 1.0s;"
           >
             <button
@@ -999,7 +1000,7 @@
     >
       <!-- Modal -->
       <div
-        class="w-full h-full max-w-[98vw] max-h-[95vh] bg-[#1a1a1a] border-2 border-[#533483] rounded-lg p-4 {isClosingFullscreen ? 'slide-out-blurred-top' : 'bounce-in-top'}"
+        class="w-full h-full max-w-[98vw] max-h-[95vh] bg-[#1a1a1a] border-2 border-[#533483] rounded-lg p-4 {isClosingFullscreen ? 'slide-out-blurred-top' : (fullscreenChart === 'chart-bar' || fullscreenChart === 'chart-spline' || fullscreenChart === 'chart-rendimiento-area' ? 'slide-in-blurred-left' : (fullscreenChart === 'chart-pie' ? 'roll-in-blurred-left' : (fullscreenChart === 'chart-radar' || fullscreenChart === 'chart-gauge' ? 'slide-in-fwd-center' : (fullscreenChart === 'chart-column' ? 'slide-in-blurred-bottom' : 'bounce-in-top'))))}"
         onclick={(e) => e.stopPropagation()}
         onkeydown={(e) => e.stopPropagation()}
         role="dialog"
@@ -1111,6 +1112,178 @@
   @keyframes fingerprint-spinner-animation {
     100% {
       transform: rotate(360deg);
+    }
+  }
+
+  /* Slide in blurred left animation */
+  .slide-in-blurred-left {
+    -webkit-animation: slide-in-blurred-left 0.6s cubic-bezier(0.230, 1.000, 0.320, 1.000) both;
+    animation: slide-in-blurred-left 0.6s cubic-bezier(0.230, 1.000, 0.320, 1.000) both;
+  }
+
+  @-webkit-keyframes slide-in-blurred-left {
+    0% {
+      -webkit-transform: translateX(-1000px) scaleX(2.5) scaleY(0.2);
+      transform: translateX(-1000px) scaleX(2.5) scaleY(0.2);
+      -webkit-transform-origin: 100% 50%;
+      transform-origin: 100% 50%;
+      -webkit-filter: blur(40px);
+      filter: blur(40px);
+      opacity: 0;
+    }
+    100% {
+      -webkit-transform: translateX(0) scaleY(1) scaleX(1);
+      transform: translateX(0) scaleY(1) scaleX(1);
+      -webkit-transform-origin: 50% 50%;
+      transform-origin: 50% 50%;
+      -webkit-filter: blur(0);
+      filter: blur(0);
+      opacity: 1;
+    }
+  }
+
+  @keyframes slide-in-blurred-left {
+    0% {
+      -webkit-transform: translateX(-1000px) scaleX(2.5) scaleY(0.2);
+      transform: translateX(-1000px) scaleX(2.5) scaleY(0.2);
+      -webkit-transform-origin: 100% 50%;
+      transform-origin: 100% 50%;
+      -webkit-filter: blur(40px);
+      filter: blur(40px);
+      opacity: 0;
+    }
+    100% {
+      -webkit-transform: translateX(0) scaleY(1) scaleX(1);
+      transform: translateX(0) scaleY(1) scaleX(1);
+      -webkit-transform-origin: 50% 50%;
+      transform-origin: 50% 50%;
+      -webkit-filter: blur(0);
+      filter: blur(0);
+      opacity: 1;
+    }
+  }
+
+  /* Roll in blurred left animation */
+  .roll-in-blurred-left {
+    -webkit-animation: roll-in-blurred-left 0.65s cubic-bezier(0.230, 1.000, 0.320, 1.000) both;
+    animation: roll-in-blurred-left 0.65s cubic-bezier(0.230, 1.000, 0.320, 1.000) both;
+  }
+
+  @-webkit-keyframes roll-in-blurred-left {
+    0% {
+      -webkit-transform: translateX(-1000px) rotate(-720deg);
+      transform: translateX(-1000px) rotate(-720deg);
+      -webkit-filter: blur(50px);
+      filter: blur(50px);
+      opacity: 0;
+    }
+    100% {
+      -webkit-transform: translateX(0) rotate(0deg);
+      transform: translateX(0) rotate(0deg);
+      -webkit-filter: blur(0);
+      filter: blur(0);
+      opacity: 1;
+    }
+  }
+
+  @keyframes roll-in-blurred-left {
+    0% {
+      -webkit-transform: translateX(-1000px) rotate(-720deg);
+      transform: translateX(-1000px) rotate(-720deg);
+      -webkit-filter: blur(50px);
+      filter: blur(50px);
+      opacity: 0;
+    }
+    100% {
+      -webkit-transform: translateX(0) rotate(0deg);
+      transform: translateX(0) rotate(0deg);
+      -webkit-filter: blur(0);
+      filter: blur(0);
+      opacity: 1;
+    }
+  }
+
+  /* Slide in fwd center animation */
+  .slide-in-fwd-center {
+    -webkit-animation: slide-in-fwd-center 0.4s cubic-bezier(0.250, 0.460, 0.450, 0.940) both;
+    animation: slide-in-fwd-center 0.4s cubic-bezier(0.250, 0.460, 0.450, 0.940) both;
+    -webkit-transform-style: preserve-3d;
+    transform-style: preserve-3d;
+    -webkit-perspective: 1000px;
+    perspective: 1000px;
+  }
+
+  @-webkit-keyframes slide-in-fwd-center {
+    0% {
+      -webkit-transform: perspective(1000px) translateZ(-1400px);
+      transform: perspective(1000px) translateZ(-1400px);
+      opacity: 0;
+    }
+    100% {
+      -webkit-transform: perspective(1000px) translateZ(0);
+      transform: perspective(1000px) translateZ(0);
+      opacity: 1;
+    }
+  }
+
+  @keyframes slide-in-fwd-center {
+    0% {
+      -webkit-transform: perspective(1000px) translateZ(-1400px);
+      transform: perspective(1000px) translateZ(-1400px);
+      opacity: 0;
+    }
+    100% {
+      -webkit-transform: perspective(1000px) translateZ(0);
+      transform: perspective(1000px) translateZ(0);
+      opacity: 1;
+    }
+  }
+
+  /* Slide in blurred bottom animation */
+  .slide-in-blurred-bottom {
+    -webkit-animation: slide-in-blurred-bottom 0.6s cubic-bezier(0.230, 1.000, 0.320, 1.000) both;
+    animation: slide-in-blurred-bottom 0.6s cubic-bezier(0.230, 1.000, 0.320, 1.000) both;
+  }
+
+  @-webkit-keyframes slide-in-blurred-bottom {
+    0% {
+      -webkit-transform: translateY(1000px) scaleY(2.5) scaleX(0.2);
+      transform: translateY(1000px) scaleY(2.5) scaleX(0.2);
+      -webkit-transform-origin: 50% 100%;
+      transform-origin: 50% 100%;
+      -webkit-filter: blur(40px);
+      filter: blur(40px);
+      opacity: 0;
+    }
+    100% {
+      -webkit-transform: translateY(0) scaleY(1) scaleX(1);
+      transform: translateY(0) scaleY(1) scaleX(1);
+      -webkit-transform-origin: 50% 50%;
+      transform-origin: 50% 50%;
+      -webkit-filter: blur(0);
+      filter: blur(0);
+      opacity: 1;
+    }
+  }
+
+  @keyframes slide-in-blurred-bottom {
+    0% {
+      -webkit-transform: translateY(1000px) scaleY(2.5) scaleX(0.2);
+      transform: translateY(1000px) scaleY(2.5) scaleX(0.2);
+      -webkit-transform-origin: 50% 100%;
+      transform-origin: 50% 100%;
+      -webkit-filter: blur(40px);
+      filter: blur(40px);
+      opacity: 0;
+    }
+    100% {
+      -webkit-transform: translateY(0) scaleY(1) scaleX(1);
+      transform: translateY(0) scaleY(1) scaleX(1);
+      -webkit-transform-origin: 50% 50%;
+      transform-origin: 50% 50%;
+      -webkit-filter: blur(0);
+      filter: blur(0);
+      opacity: 1;
     }
   }
 </style>
