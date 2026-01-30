@@ -18,6 +18,7 @@
   let creandoRegistro = $state(false);
   let registroExiste = $state(true);
   let totalProgresosRegistro = $state(0);
+  let registroVerificado = $state(false);
   let mensajeRegistro = $state<string | null>(null);
 
   // Modal states
@@ -49,6 +50,8 @@
     } catch {
       registroExiste = false;
       totalProgresosRegistro = 0;
+    } finally {
+      registroVerificado = true;
     }
   }
 
@@ -232,7 +235,7 @@
   </div>
 
   <!-- Botón para crear/actualizar registro del día (solo si faltan hábitos por agregar) -->
-  {#if !loading && habitos.length > 0}
+  {#if !loading && habitos.length > 0 && registroVerificado}
     {@const habitosHoy = getHabitosHoy()}
     {@const necesitaActualizar = habitosHoy.length > 0 && (!registroExiste || totalProgresosRegistro < habitosHoy.length)}
     {#if necesitaActualizar}
