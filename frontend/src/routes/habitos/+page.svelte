@@ -231,11 +231,11 @@
     </button>
   </div>
 
-  <!-- Botón para crear/actualizar registro del día -->
+  <!-- Botón para crear/actualizar registro del día (solo si faltan hábitos por agregar) -->
   {#if !loading && habitos.length > 0}
     {@const habitosHoy = getHabitosHoy()}
-    {#if habitosHoy.length > 0}
-      {@const necesitaActualizar = !registroExiste || totalProgresosRegistro < habitosHoy.length}
+    {@const necesitaActualizar = habitosHoy.length > 0 && (!registroExiste || totalProgresosRegistro < habitosHoy.length)}
+    {#if necesitaActualizar}
       <div class="mb-6 p-4 bg-[#1B1B2F] border border-border rounded-lg">
         <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div>
@@ -252,7 +252,7 @@
           <button
             onclick={crearRegistroHoy}
             disabled={creandoRegistro}
-            class="flex items-center gap-2 {necesitaActualizar ? 'bg-success hover:bg-success/80' : 'bg-accent hover:bg-accent/80'} disabled:opacity-50 disabled:cursor-not-allowed text-bg_primary font-bold py-2 px-4 rounded-lg transition-colors whitespace-nowrap"
+            class="flex items-center gap-2 bg-success hover:bg-success/80 disabled:opacity-50 disabled:cursor-not-allowed text-bg_primary font-bold py-2 px-4 rounded-lg transition-colors whitespace-nowrap"
           >
             {#if creandoRegistro}
               <span class="animate-spin">⏳</span> Procesando...
