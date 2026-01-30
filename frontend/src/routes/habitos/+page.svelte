@@ -5,6 +5,7 @@
     deleteHabito,
     getRegistroPorFecha,
     verificarRegistroExiste,
+    deleteRegistro,
     type Habito,
   } from "$lib/api";
   import { authStore } from "$lib/stores/auth.svelte";
@@ -172,19 +173,27 @@
     });
   }
 
-  // Crear registro del día
+  // Crear/Recrear registro del día (elimina el existente y crea uno nuevo)
   async function crearRegistroHoy() {
     creandoRegistro = true;
     mensajeRegistro = null;
     try {
       const fecha = getFechaISO();
+      
+      // Verificar si existe un registro y eliminarlo
+      const verificacion = await verificarRegistroExiste(fecha);
+      if (verificacion.existe && verificacion.registro_id) {
+        await deleteRegistro(verificacion.registro_id);
+      }
+      
+      // Crear nuevo registro con todos los hábitos actuales
       const registro = await getRegistroPorFecha(fecha);
       registroExiste = true;
-      mensajeRegistro = `✅ Registro creado con ${registro.progresos.length} hábitos para hoy`;
+      totalProgresosRegistro = registro.progresos.length;
+      mensajeRegistro = `✅ Registro ${verificacion.existe ? 'actualizado' : 'creado'} con ${registro.progresos.length} hábitos para hoy`;
       // Ocultar mensaje después de 3 segundos
       setTimeout(() => {
         mensajeRegistro = null;
-        registroExiste = true; // Ocultar el panel
       }, 3000);
     } catch (e) {
       mensajeRegistro = `❌ ${e instanceof Error ? e.message : 'Error al crear registro'}`;
@@ -222,27 +231,33 @@
     </button>
   </div>
 
-  <!-- Botón para crear registro del día (solo si no existe registro completo) -->
-  {#if !loading && habitos.length > 0 && !registroExiste}
-    {@const habitosFaltantesHoy = getHabitosFaltantesHoy()}
-    {#if habitosFaltantesHoy.length > 0}
+  <!-- Botón para crear/actualizar registro del día -->
+  {#if !loading && habitos.length > 0}
+    {@const habitosHoy = getHabitosHoy()}
+    {#if habitosHoy.length > 0}
+      {@const necesitaActualizar = !registroExiste || totalProgresosRegistro < habitosHoy.length}
       <div class="mb-6 p-4 bg-[#1B1B2F] border border-border rounded-lg">
         <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div>
             <p class="text-text_primary font-medium">
-              📅 Hoy tienes <span class="text-accent font-bold">{habitosFaltantesHoy.length}</span> hábitos programados
+              📅 Hoy tienes <span class="text-accent font-bold">{habitosHoy.length}</span> hábitos programados
+              {#if registroExiste && totalProgresosRegistro < habitosHoy.length}
+                <span class="text-warning text-sm">({habitosHoy.length - totalProgresosRegistro} nuevos)</span>
+              {/if}
             </p>
             <p class="text-text_secondary text-sm">
-              {habitosFaltantesHoy.map(h => h.nombre).join(', ')}
+              {habitosHoy.map(h => h.nombre).join(', ')}
             </p>
           </div>
           <button
             onclick={crearRegistroHoy}
             disabled={creandoRegistro}
-            class="flex items-center gap-2 bg-success hover:bg-success/80 disabled:opacity-50 disabled:cursor-not-allowed text-bg_primary font-bold py-2 px-4 rounded-lg transition-colors whitespace-nowrap"
+            class="flex items-center gap-2 {necesitaActualizar ? 'bg-success hover:bg-success/80' : 'bg-accent hover:bg-accent/80'} disabled:opacity-50 disabled:cursor-not-allowed text-bg_primary font-bold py-2 px-4 rounded-lg transition-colors whitespace-nowrap"
           >
             {#if creandoRegistro}
-              <span class="animate-spin">⏳</span> Creando...
+              <span class="animate-spin">⏳</span> Procesando...
+            {:else if registroExiste}
+              <span>🔄</span> Actualizar registro
             {:else}
               <span>📝</span> Crear registro de hoy
             {/if}

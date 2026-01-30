@@ -414,6 +414,20 @@ export async function getRegistroPorFecha(fecha: string): Promise<RegistroConPro
 }
 
 /**
+ * Elimina un registro por su ID
+ */
+export async function deleteRegistro(registroId: number): Promise<void> {
+  const response = await fetchConAuth(`/registros/${registroId}`, {
+    method: 'DELETE',
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail || 'Error al eliminar registro');
+  }
+}
+
+/**
  * Alterna el estado completado de un progreso
  */
 export async function toggleProgreso(progresoId: number): Promise<ProgresoHabito> {
