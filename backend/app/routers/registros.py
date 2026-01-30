@@ -37,6 +37,46 @@ async def get_registros(
     return result.scalars().all()
 
 
+@router.get("/existe/{fecha}")
+async def verificar_registro_existe(
+    fecha: str,  # Formato: YYYY-MM-DD
+    current_user: usuario = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Verifica si existe un registro para una fecha específica SIN crearlo.
+    Retorna información sobre si el registro existe y cuántos progresos tiene.
+    """
+    # Validar formato de fecha
+    try:
+        fecha_obj = datetime.strptime(fecha, "%Y-%m-%d").date()
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Formato de fecha inválido. Use YYYY-MM-DD")
+
+    # Buscar registro existente
+    result = await db.execute(
+        select(registros).where(
+            and_(registros.usuario_id == current_user.id, registros.fecha == fecha)
+        )
+    )
+    db_registro = result.scalar_one_or_none()
+
+    if not db_registro:
+        return {"existe": False, "registro_id": None, "total_progresos": 0}
+
+    # Contar progresos del registro
+    progresos_result = await db.execute(
+        select(progreso_habitos).where(progreso_habitos.registro_id == db_registro.id)
+    )
+    progresos = progresos_result.scalars().all()
+
+    return {
+        "existe": True,
+        "registro_id": db_registro.id,
+        "total_progresos": len(progresos)
+    }
+
+
 @router.get("/fecha/{fecha}", response_model=RegistroConProgresos)
 async def get_or_create_registro_por_fecha(
     fecha: str,  # Formato: YYYY-MM-DD

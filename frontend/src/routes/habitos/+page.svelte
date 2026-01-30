@@ -4,6 +4,7 @@
     getHabitos,
     deleteHabito,
     getRegistroPorFecha,
+    verificarRegistroExiste,
     type Habito,
   } from "$lib/api";
   import { authStore } from "$lib/stores/auth.svelte";
@@ -15,6 +16,7 @@
   let error = $state<string | null>(null);
   let creandoRegistro = $state(false);
   let registroExiste = $state(true);
+  let totalProgresosRegistro = $state(0);
   let mensajeRegistro = $state<string | null>(null);
 
   // Modal states
@@ -32,33 +34,35 @@
   async function verificarRegistroHoy() {
     try {
       const fecha = getFechaISO();
-      const registros = await getRegistroPorFecha(fecha);
-      const habitos = await getHabitos();
-      if (registros.progresos.length === habitos.length) {
-        registroExiste = true;
+      const resultado = await verificarRegistroExiste(fecha);
+      
+      if (resultado.existe) {
+        totalProgresosRegistro = resultado.total_progresos;
+        // Verificar si todos los hábitos del día están en el registro
+        const habitosHoy = getHabitosHoy();
+        registroExiste = resultado.total_progresos >= habitosHoy.length;
       } else {
         registroExiste = false;
+        totalProgresosRegistro = 0;
       }
-
     } catch {
       registroExiste = false;
+      totalProgresosRegistro = 0;
     }
   }
 
-    async function getHabitosfaltanteshoy(): Promise<Habito[]> {
-      const fecha = getFechaISO();
-      const registros = await getRegistroPorFecha(fecha);
-      const habitos = await getHabitos();
-      let faltantes = [];
-      for (const habito of habitos) {
-        const registrado = registros.progresos.find(p => p.habito_id === habito.id);
-        const dias = JSON.parse(habito.dias);
-        const diaActual = getDiaActual();
-        if (!registrado && dias.includes(diaActual) && habito.activo) {
-          faltantes.push(habito);
-        }
+    // Obtiene los hábitos que faltan por agregar al registro de hoy
+    function getHabitosFaltantesHoy(): Habito[] {
+      const habitosHoy = getHabitosHoy();
+      // Si no hay registro, todos los hábitos de hoy faltan
+      if (!registroExiste || totalProgresosRegistro === 0) {
+        return habitosHoy;
       }
-      return faltantes;
+      // Si el registro tiene menos progresos que hábitos de hoy, hay faltantes
+      if (totalProgresosRegistro < habitosHoy.length) {
+        return habitosHoy; // Mostramos todos porque no sabemos cuáles faltan sin crear el registro
+      }
+      return [];
     }
     
 
@@ -218,41 +222,39 @@
     </button>
   </div>
 
-  <!-- Botón para crear registro del día (solo si no existe registro) -->
+  <!-- Botón para crear registro del día (solo si no existe registro completo) -->
   {#if !loading && habitos.length > 0 && !registroExiste}
-  
-    {#await getHabitosfaltanteshoy() then habitosFaltanteHoy}
-      {#if habitosFaltanteHoy.length > 0}
-        <div class="mb-6 p-4 bg-[#1B1B2F] border border-border rounded-lg">
-          <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-            <div>
-              <p class="text-text_primary font-medium">
-                📅 Hoy tienes <span class="text-accent font-bold">{habitosFaltanteHoy.length}</span> hábitos programados
-              </p>
-              <p class="text-text_secondary text-sm">
-                {habitosFaltanteHoy.map(h => h.nombre).join(', ')}
-              </p>
-            </div>
-            <button
-              onclick={crearRegistroHoy}
-              disabled={creandoRegistro}
-              class="flex items-center gap-2 bg-success hover:bg-success/80 disabled:opacity-50 disabled:cursor-not-allowed text-bg_primary font-bold py-2 px-4 rounded-lg transition-colors whitespace-nowrap"
-            >
-              {#if creandoRegistro}
-                <span class="animate-spin">⏳</span> Creando...
-              {:else}
-                <span>📝</span> Crear registro de hoy
-              {/if}
-            </button>
-          </div>
-          {#if mensajeRegistro}
-            <p class="mt-3 text-sm {mensajeRegistro.startsWith('✅') ? 'text-success' : 'text-accent'}">
-              {mensajeRegistro}
+    {@const habitosFaltantesHoy = getHabitosFaltantesHoy()}
+    {#if habitosFaltantesHoy.length > 0}
+      <div class="mb-6 p-4 bg-[#1B1B2F] border border-border rounded-lg">
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <div>
+            <p class="text-text_primary font-medium">
+              📅 Hoy tienes <span class="text-accent font-bold">{habitosFaltantesHoy.length}</span> hábitos programados
             </p>
-          {/if}
+            <p class="text-text_secondary text-sm">
+              {habitosFaltantesHoy.map(h => h.nombre).join(', ')}
+            </p>
+          </div>
+          <button
+            onclick={crearRegistroHoy}
+            disabled={creandoRegistro}
+            class="flex items-center gap-2 bg-success hover:bg-success/80 disabled:opacity-50 disabled:cursor-not-allowed text-bg_primary font-bold py-2 px-4 rounded-lg transition-colors whitespace-nowrap"
+          >
+            {#if creandoRegistro}
+              <span class="animate-spin">⏳</span> Creando...
+            {:else}
+              <span>📝</span> Crear registro de hoy
+            {/if}
+          </button>
         </div>
-      {/if}
-    {/await}
+        {#if mensajeRegistro}
+          <p class="mt-3 text-sm {mensajeRegistro.startsWith('✅') ? 'text-success' : 'text-accent'}">
+            {mensajeRegistro}
+          </p>
+        {/if}
+      </div>
+    {/if}
   {/if}
 
   {#if loading}

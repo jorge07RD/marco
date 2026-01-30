@@ -386,6 +386,20 @@ export async function deleteCategoria(id: number): Promise<void> {
 // ==================== Registros API (Protegidos) ====================
 
 /**
+ * Verifica si existe un registro para una fecha SIN crearlo
+ */
+export async function verificarRegistroExiste(fecha: string): Promise<{existe: boolean, registro_id: number | null, total_progresos: number}> {
+  const response = await fetchConAuth(`/registros/existe/${fecha}`);
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail || 'Error al verificar registro');
+  }
+
+  return response.json();
+}
+
+/**
  * Obtiene o crea el registro del usuario autenticado para una fecha
  */
 export async function getRegistroPorFecha(fecha: string): Promise<RegistroConProgresos> {
