@@ -5,18 +5,24 @@ Endpoints para registro, login y obtención del usuario actual.
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
+from pydantic import BaseModel
 
 from app.database import get_db
-from app.models import usuario
+from app.models import usuario, registros, progreso_habitos, habitos
 from app.schemas import LoginRequest, RegisterRequest, TokenResponse, UsuarioResponse, UsuarioUpdate
 from app.security import (
     authenticate_user,
     create_access_token,
     get_current_user,
-    hash_password
+    hash_password,
+    verify_password
 )
+
+
+class VerifyPasswordRequest(BaseModel):
+    password: str
 
 router = APIRouter(prefix="/auth", tags=["autenticación"])
 
@@ -251,3 +257,105 @@ async def update_me(
         created_at=current_user.created_at,
         updated_at=current_user.updated_at
     )
+
+
+@router.post(
+    "/verify-password",
+    summary="Verificar contraseña del usuario",
+    description="Verifica que la contraseña proporcionada sea correcta para el usuario autenticado."
+)
+async def verify_user_password(
+    data: VerifyPasswordRequest,
+    current_user: usuario = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Verifica la contraseña del usuario autenticado.
+    
+    Returns:
+        {"valid": True} si la contraseña es correcta
+        
+    Raises:
+        HTTPException 401: Si la contraseña es incorrecta
+    """
+    if not verify_password(data.password, current_user.contrasena):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Contraseña incorrecta"
+        )
+    
+    return {"valid": True}
+
+
+@router.delete(
+    "/delete-all-data",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Eliminar todos los registros del usuario",
+    description="Elimina todos los registros y progresos del usuario autenticado, pero mantiene la cuenta."
+)
+async def delete_all_user_data(
+    current_user: usuario = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Elimina todos los registros y progresos del usuario, pero mantiene la cuenta y los hábitos.
+    """
+    # Obtener todos los registros del usuario
+    registros_result = await db.execute(
+        select(registros).where(registros.usuario_id == current_user.id)
+    )
+    registros_usuario = registros_result.scalars().all()
+    
+    # Eliminar progresos de cada registro
+    for registro in registros_usuario:
+        await db.execute(
+            delete(progreso_habitos).where(progreso_habitos.registro_id == registro.id)
+        )
+    
+    # Eliminar registros
+    await db.execute(
+        delete(registros).where(registros.usuario_id == current_user.id)
+    )
+    
+    await db.commit()
+
+
+@router.delete(
+    "/delete-account",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Eliminar cuenta del usuario",
+    description="Elimina la cuenta del usuario y todos sus datos asociados."
+)
+async def delete_user_account(
+    current_user: usuario = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Elimina la cuenta del usuario y todos sus datos (registros, progresos, hábitos).
+    """
+    # Obtener todos los registros del usuario
+    registros_result = await db.execute(
+        select(registros).where(registros.usuario_id == current_user.id)
+    )
+    registros_usuario = registros_result.scalars().all()
+    
+    # Eliminar progresos de cada registro
+    for registro in registros_usuario:
+        await db.execute(
+            delete(progreso_habitos).where(progreso_habitos.registro_id == registro.id)
+        )
+    
+    # Eliminar registros
+    await db.execute(
+        delete(registros).where(registros.usuario_id == current_user.id)
+    )
+    
+    # Eliminar hábitos
+    await db.execute(
+        delete(habitos).where(habitos.usuario_id == current_user.id)
+    )
+    
+    # Eliminar usuario
+    await db.delete(current_user)
+    
+    await db.commit()

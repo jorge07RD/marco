@@ -229,6 +229,54 @@ export function logout(): void {
   }
 }
 
+/**
+ * Verifica la contraseña del usuario actual
+ */
+export async function verificarContrasena(password: string): Promise<boolean> {
+  const response = await fetchConAuth('/auth/verify-password', {
+    method: 'POST',
+    body: JSON.stringify({ password }),
+  });
+
+  if (response.status === 401) {
+    return false;
+  }
+
+  if (!response.ok) {
+    throw new Error('Error al verificar contraseña');
+  }
+
+  return true;
+}
+
+/**
+ * Elimina todos los registros y progresos del usuario (mantiene la cuenta)
+ */
+export async function eliminarTodosLosDatos(): Promise<void> {
+  const response = await fetchConAuth('/auth/delete-all-data', {
+    method: 'DELETE',
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail || 'Error al eliminar datos');
+  }
+}
+
+/**
+ * Elimina la cuenta del usuario y todos sus datos
+ */
+export async function eliminarCuenta(): Promise<void> {
+  const response = await fetchConAuth('/auth/delete-account', {
+    method: 'DELETE',
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail || 'Error al eliminar cuenta');
+  }
+}
+
 // ==================== Habitos API (Protegidos) ====================
 
 /**
