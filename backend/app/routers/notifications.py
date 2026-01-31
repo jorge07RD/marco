@@ -266,14 +266,21 @@ async def send_scheduled_reminders(
     users = result.scalars().all()
     
     stats = {"checked": 0, "sent": 0, "failed": 0, "skipped": 0}
+    debug_info = []  # Info de debug para cada usuario
     
     for user in users:
         stats["checked"] += 1
+        user_debug = {
+            "user_id": user.id,
+            "timezone": user.timezone or "America/Santo_Domingo",
+            "hora_recordatorio": user.hora_recordatorio or "08:00"
+        }
         
         try:
             # Obtener hora actual en zona horaria del usuario
             user_tz = ZoneInfo(user.timezone or "America/Santo_Domingo")
             now_user = datetime.now(user_tz)
+            user_debug["hora_actual_usuario"] = now_user.strftime("%H:%M:%S")
             
             # Parsear hora del recordatorio del usuario
             hora_recordatorio = user.hora_recordatorio or "08:00"
@@ -283,10 +290,12 @@ async def send_scheduled_reminders(
             recordatorio_hoy = now_user.replace(hour=hora, minute=minuto, second=0, microsecond=0)
             
             # Calcular diferencia en minutos
-            diferencia = abs((now_user - recordatorio_hoy).total_seconds() / 60)
+            diferencia = (now_user - recordatorio_hoy).total_seconds() / 60
+            user_debug["diferencia_minutos"] = round(diferencia, 2)
             
             # ¿Está dentro de la ventana de ±5 minutos?
-            if diferencia <= 5:
+            if abs(diferencia) <= 5:
+                user_debug["accion"] = "enviando"
                 notification_stats = await push_service.send_to_user(
                     db=db,
                     user_id=user.id,
@@ -297,15 +306,23 @@ async def send_scheduled_reminders(
                 
                 if notification_stats["sent"] > 0:
                     stats["sent"] += 1
+                    user_debug["resultado"] = "enviado"
                 else:
                     stats["failed"] += 1
+                    user_debug["resultado"] = "fallido"
             else:
                 stats["skipped"] += 1
+                user_debug["accion"] = "saltado"
+                user_debug["razon"] = f"Diferencia de {round(diferencia, 1)} min, fuera de ventana ±5"
         except Exception as e:
             stats["failed"] += 1
+            user_debug["error"] = str(e)
+        
+        debug_info.append(user_debug)
     
     return {
         "message": "Recordatorios procesados",
         "stats": stats,
+        "debug": debug_info,
         "timestamp": datetime.utcnow().isoformat()
     }
