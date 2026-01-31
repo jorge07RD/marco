@@ -122,51 +122,66 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
  * Suscribe al usuario a notificaciones push
  */
 export async function subscribeToPush(): Promise<boolean> {
+  console.log('[Push] Iniciando suscripción...');
+  
   if (!isPushSupported()) {
-    console.warn('Push no soportado');
+    console.warn('[Push] Push no soportado');
     return false;
   }
 
   // Solicitar permiso si no está concedido
   const permission = await requestNotificationPermission();
+  console.log('[Push] Permiso:', permission);
+  
   if (permission !== 'granted') {
-    console.warn('Permiso de notificaciones denegado');
+    console.warn('[Push] Permiso de notificaciones denegado');
     return false;
   }
 
   try {
     // Registrar service worker
+    console.log('[Push] Registrando service worker...');
     const registration = await registerServiceWorker();
     if (!registration) {
+      console.error('[Push] No se pudo registrar el service worker');
       return false;
     }
+    console.log('[Push] Service worker registrado:', registration.scope);
 
     // Esperar a que el service worker esté activo
+    console.log('[Push] Esperando service worker ready...');
     await navigator.serviceWorker.ready;
+    console.log('[Push] Service worker ready');
 
     // Obtener clave VAPID
+    console.log('[Push] Obteniendo clave VAPID...');
     const vapidKey = await getVapidPublicKey();
     if (!vapidKey) {
-      console.error('No se pudo obtener la clave VAPID');
+      console.error('[Push] No se pudo obtener la clave VAPID');
       return false;
     }
+    console.log('[Push] Clave VAPID obtenida:', vapidKey.substring(0, 20) + '...');
 
     // Crear suscripción push
+    console.log('[Push] Creando suscripción push...');
     const subscription = await registration.pushManager.subscribe({
       userVisibleOnly: true,
       applicationServerKey: urlBase64ToUint8Array(vapidKey) as BufferSource
     });
+    console.log('[Push] Suscripción creada:', subscription.endpoint);
 
     // Extraer datos de la suscripción
     const subscriptionJson = subscription.toJSON();
     const token = obtenerToken();
 
     if (!token) {
-      console.error('No hay token de autenticación');
+      console.error('[Push] No hay token de autenticación');
       return false;
     }
+    console.log('[Push] Token de autenticación presente');
 
     // Enviar suscripción al servidor
+    console.log('[Push] Enviando suscripción al servidor...');
     const response = await fetch(`${API_BASE}/notifications/subscribe`, {
       method: 'POST',
       headers: {
@@ -183,13 +198,14 @@ export async function subscribeToPush(): Promise<boolean> {
 
     if (!response.ok) {
       const error = await response.json();
+      console.error('[Push] Error del servidor:', error);
       throw new Error(error.detail || 'Error al suscribirse');
     }
 
-    console.log('Suscripción push creada exitosamente');
+    console.log('[Push] Suscripción push creada exitosamente');
     return true;
   } catch (error) {
-    console.error('Error en suscripción push:', error);
+    console.error('[Push] Error en suscripción push:', error);
     return false;
   }
 }
