@@ -490,13 +490,20 @@
             <!-- Hora del recordatorio -->
             <div>
               <label for="hora" class="block text-text_secondary text-sm mb-1">Hora del recordatorio</label>
-              <input
+              <select
                 id="hora"
-                type="time"
                 value={horaRecordatorio}
                 onchange={handleHoraChange}
-                class="bg-bg_input border border-border rounded px-3 py-2 text-text_primary focus:border-accent focus:outline-none"
-              />
+                class="w-full bg-bg_input border border-border rounded px-3 py-2 text-text_primary focus:border-accent focus:outline-none"
+              >
+                {#each Array.from({length: 48}, (_, i) => {
+                  const hours = Math.floor(i / 2).toString().padStart(2, '0');
+                  const mins = i % 2 === 0 ? '00' : '30';
+                  return `${hours}:${mins}`;
+                }) as time}
+                  <option value={time}>{time}</option>
+                {/each}
+              </select>
             </div>
 
             <!-- Zona horaria -->

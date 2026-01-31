@@ -239,3 +239,63 @@ async def send_test_notification(
         "sent": stats["sent"],
         "failed": stats["failed"]
     }
+
+
+@router.post(
+    "/send-reminders",
+    summary="Enviar recordatorios programados",
+    description="Endpoint llamado por Cloud Scheduler para enviar recordatorios."
+)
+async def send_scheduled_reminders(
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Envía recordatorios a usuarios que tienen la hora actual configurada.
+    Cloud Scheduler llama este endpoint cada minuto.
+    """
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+    
+    # Obtener usuarios con recordatorios activos
+    result = await db.execute(
+        select(usuario).where(
+            usuario.notificaciones_activas == True
+        )
+    )
+    users = result.scalars().all()
+    
+    stats = {"checked": 0, "sent": 0, "failed": 0, "skipped": 0}
+    
+    for user in users:
+        stats["checked"] += 1
+        
+        try:
+            # Obtener hora actual en zona horaria del usuario
+            user_tz = ZoneInfo(user.timezone or "America/Santo_Domingo")
+            now_user = datetime.now(user_tz)
+            current_time = now_user.strftime("%H:%M")
+            
+            # ¿Coincide con la hora del recordatorio?
+            if current_time == (user.hora_recordatorio or "08:00"):
+                notification_stats = await push_service.send_to_user(
+                    db=db,
+                    user_id=user.id,
+                    title="⏰ Recordatorio de hábitos",
+                    body="¡No olvides registrar tus hábitos de hoy!",
+                    url="/habitos"
+                )
+                
+                if notification_stats["sent"] > 0:
+                    stats["sent"] += 1
+                else:
+                    stats["failed"] += 1
+            else:
+                stats["skipped"] += 1
+        except Exception as e:
+            stats["failed"] += 1
+    
+    return {
+        "message": "Recordatorios procesados",
+        "stats": stats,
+        "timestamp": datetime.utcnow().isoformat()
+    }
