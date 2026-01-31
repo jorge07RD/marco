@@ -9,16 +9,22 @@ echo ""
 echo "📊 Verificando configuración de base de datos..."
 echo "DATABASE_URL: ${DATABASE_URL:-No configurada}"
 
+echo ""echo "🔍 Verificando y preparando base de datos para migraciones..."
+python verify_and_stamp.py
+
+echo ""echo "� Verificando versión actual de Alembic..."
+alembic current || echo "⚠️  No hay versión actual (primera migración)"
+
 echo ""
 echo "🔄 Ejecutando migraciones de Alembic..."
-alembic upgrade head
+alembic upgrade head -v
 
-if [ $? -eq 0 ]; then
-    echo "✅ Migraciones completadas exitosamente"
-else
-    echo "❌ Error en las migraciones"
-    exit 1
-fi
+echo ""
+echo "✅ Migraciones completadas exitosamente"
+
+echo ""
+echo "🔍 Versión actual después de migración..."
+alembic current
 
 echo ""
 echo "🚀 Iniciando servidor FastAPI..."
