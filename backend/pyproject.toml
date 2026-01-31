@@ -15,6 +15,9 @@ dependencies = [
     "bcrypt>=5.0.0",
     "python-jose>=3.5.0",
     "asyncpg>=0.31.0",
+    "pywebpush>=2.0.0",
+    "apscheduler>=3.10.0",
+    "pytz>=2024.1",
 ]
 
 

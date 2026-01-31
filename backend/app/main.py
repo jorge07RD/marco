@@ -1,20 +1,32 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from app.config import get_settings
 from app.database import init_db
-from app.routers import usuarios, categorias, habitos, registros, habito_dias, auth, analisis
+from app.routers import usuarios, categorias, habitos, registros, habito_dias, auth, analisis, notifications
+from app.services.scheduler import check_and_send_reminders
 
 settings = get_settings()
+scheduler = AsyncIOScheduler()
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
     await init_db()
+    
+    # Iniciar el scheduler para recordatorios
+    scheduler.add_job(check_and_send_reminders, 'interval', minutes=1)
+    scheduler.start()
+    print("\u2705 Scheduler de recordatorios iniciado (ejecuta cada minuto)")
+    
     yield
+    
     # Shutdown
+    scheduler.shutdown()
+    print("\u2705 Scheduler detenido")
 
 
 
@@ -45,6 +57,7 @@ app.include_router(habitos.router, prefix="/api")
 app.include_router(registros.router, prefix="/api")
 app.include_router(habito_dias.router, prefix="/api")
 app.include_router(analisis.router, prefix="/api")
+app.include_router(notifications.router, prefix="/api")
 
 
 @app.get("/")

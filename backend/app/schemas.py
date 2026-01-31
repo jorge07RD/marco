@@ -8,6 +8,10 @@ class UsuarioBase(BaseModel):
     nombre: str = Field(..., min_length=1, max_length=100)
     email: EmailStr
     ver_futuro: bool = False
+    notificaciones_activas: bool = False
+    recordatorios_activos: bool = False
+    hora_recordatorio: str = "08:00"
+    timezone: str = "America/Mexico_City"
 
 
 class UsuarioCreate(UsuarioBase):
@@ -19,6 +23,10 @@ class UsuarioUpdate(BaseModel):
     email: Optional[EmailStr] = None
     contrasena: Optional[str] = Field(None, min_length=6)
     ver_futuro: Optional[bool] = None
+    notificaciones_activas: Optional[bool] = None
+    recordatorios_activos: Optional[bool] = None
+    hora_recordatorio: Optional[str] = None
+    timezone: Optional[str] = None
 
 
 class UsuarioResponse(UsuarioBase):
@@ -300,5 +308,34 @@ class ProgresoHabitoDiaCalendario(BaseModel):
     fecha: str  # Formato YYYY-MM-DD
     completado: bool  # Si el hábito fue completado ese día
     programado: bool  # Si el hábito estaba programado para ese día
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+# ==================== Push Subscription Schemas ====================
+class PushSubscriptionCreate(BaseModel):
+    """Esquema para crear una suscripción push."""
+    endpoint: str
+    keys: dict  # Contiene p256dh y auth
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "endpoint": "https://fcm.googleapis.com/fcm/send/...",
+                "keys": {
+                    "p256dh": "BKxN...",
+                    "auth": "qwer..."
+                }
+            }
+        }
+    )
+
+
+class PushSubscriptionResponse(BaseModel):
+    """Esquema de respuesta de suscripción push."""
+    id: int
+    usuario_id: int
+    endpoint: str
+    created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)

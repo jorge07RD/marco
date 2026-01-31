@@ -10,6 +10,10 @@ class usuario(Base):
     email = Column(String, unique=True, index=True, nullable=False)
     contrasena = Column(String, nullable=False)
     ver_futuro = Column(Boolean, default=False)  # Permite ver fechas futuras
+    notificaciones_activas = Column(Boolean, default=False)
+    recordatorios_activos = Column(Boolean, default=False)
+    hora_recordatorio = Column(String, default="08:00")
+    timezone = Column(String, default="America/Mexico_City")
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
@@ -86,3 +90,14 @@ class habito_dias(Base):
     estado = Column(Boolean, default=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+
+class push_subscription(Base):
+    __tablename__ = "push_subscriptions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    usuario_id = Column(Integer, ForeignKey("usuarios.id"), nullable=False)
+    endpoint = Column(String, nullable=False, unique=True)
+    p256dh_key = Column(String, nullable=False)
+    auth_key = Column(String, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())

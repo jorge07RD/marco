@@ -1,19 +1,28 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { obtenerUsuarioActual, updateUsuario, getCategorias, crearCategoria, updateCategoria, deleteCategoria, verificarContrasena, eliminarTodosLosDatos, eliminarCuenta, logout, type Categoria } from '$lib/api';
+  import { obtenerUsuarioActual, updateUsuario, getCategorias, crearCategoria, updateCategoria, deleteCategoria, verificarContrasena, eliminarTodosLosDatos, eliminarCuenta, logout, obtenerToken, type Categoria } from '$lib/api';
   import { authStore } from '$lib/stores/auth.svelte';
   import ConfirmModal from '$lib/components/ConfirmModal.svelte';
+  import { isNotificationSupported, isSubscribed, subscribeToPush, unsubscribeFromPush, sendTestNotification, getNotificationPermission } from '$lib/notifications';
 
   // Configuración del usuario
   let nombreUsuario = $state("");
   let email = $state("");
   let verFuturo = $state(false);
-  let notificaciones = $state(true);
-  let recordatorios = $state(true);
+  let notificaciones = $state(false);
+  let recordatorios = $state(false);
   let horaRecordatorio = $state("08:00");
+  let timezone = $state("America/Mexico_City");
   let temaOscuro = $state(true);
   let saving = $state(false);
   let saved = $state(false);
+
+  // Estados de notificaciones
+  let notificationSupported = $state(false);
+  let notificationPermission = $state<NotificationPermission>('default');
+  let isCurrentlySubscribed = $state(false);
+  let notificationMessage = $state<string | null>(null);
+  let notificationMessageType = $state<'success' | 'error' | 'info'>('info');
 
   // Gestión de categorías
   let categorias = $state<Categoria[]>([]);
@@ -39,9 +48,21 @@
       nombreUsuario = usuario.nombre;
       email = usuario.email;
       verFuturo = usuario.ver_futuro;
+      notificaciones = usuario.notificaciones_activas || false;
+      recordatorios = usuario.recordatorios_activos || false;
+      horaRecordatorio = usuario.hora_recordatorio || "08:00";
+      timezone = usuario.timezone || "America/Mexico_City";
       console.log('Usuario cargado, ver_futuro:', usuario.ver_futuro);
     } catch (error) {
       console.error('Error cargando usuario:', error);
+    }
+
+    // Verificar soporte de notificaciones
+    notificationSupported = isNotificationSupported();
+    notificationPermission = getNotificationPermission();
+    
+    if (notificationSupported) {
+      isCurrentlySubscribed = await isSubscribed();
     }
 
     // Cargar categorías
@@ -139,7 +160,11 @@
       const updatedUser = await updateUsuario({
         nombre: nombreUsuario,
         email: email,
-        ver_futuro: verFuturo
+        ver_futuro: verFuturo,
+        notificaciones_activas: notificaciones,
+        recordatorios_activos: recordatorios,
+        hora_recordatorio: horaRecordatorio,
+        timezone: timezone
       });
       // Actualizar el authStore con el usuario actualizado
       authStore.setUser(updatedUser);
@@ -151,6 +176,130 @@
       saving = false;
     }
   }
+
+  // Funciones de notificaciones
+  async function toggleNotificaciones() {
+    if (!notificationSupported) {
+      showNotificationMessage('Tu navegador no soporta notificaciones push', 'error');
+      return;
+    }
+
+    const newValue = !notificaciones;
+    
+    if (newValue) {
+      // Activar notificaciones
+      try {
+        const token = obtenerToken();
+        if (!token) {
+          showNotificationMessage('Debes iniciar sesión', 'error');
+          return;
+        }
+
+        await subscribeToPush(token);
+        notificaciones = true;
+        isCurrentlySubscribed = true;
+        notificationPermission = getNotificationPermission();
+        
+        // Guardar en el servidor
+        await updateUsuario({ notificaciones_activas: true });
+        authStore.user!.notificaciones_activas = true;
+        
+        showNotificationMessage('✅ Notificaciones activadas correctamente', 'success');
+      } catch (error: any) {
+        console.error('Error activando notificaciones:', error);
+        showNotificationMessage(error.message || 'Error activando notificaciones', 'error');
+        notificaciones = false;
+      }
+    } else {
+      // Desactivar notificaciones
+      try {
+        const token = obtenerToken();
+        if (token) {
+          await unsubscribeFromPush(token);
+        }
+        notificaciones = false;
+        recordatorios = false;
+        isCurrentlySubscribed = false;
+        
+        // Guardar en el servidor
+        await updateUsuario({ 
+          notificaciones_activas: false,
+          recordatorios_activos: false
+        });
+        authStore.user!.notificaciones_activas = false;
+        authStore.user!.recordatorios_activos = false;
+        
+        showNotificationMessage('Notificaciones desactivadas', 'info');
+      } catch (error: any) {
+        console.error('Error desactivando notificaciones:', error);
+        showNotificationMessage('Error desactivando notificaciones', 'error');
+      }
+    }
+  }
+
+  async function toggleRecordatorios() {
+    if (!notificaciones) {
+      showNotificationMessage('Primero debes activar las notificaciones push', 'error');
+      return;
+    }
+
+    recordatorios = !recordatorios;
+    try {
+      await updateUsuario({ recordatorios_activos: recordatorios });
+      authStore.user!.recordatorios_activos = recordatorios;
+    } catch (error) {
+      console.error('Error guardando recordatorios:', error);
+      recordatorios = !recordatorios;
+    }
+  }
+
+  async function handleEnviarPrueba() {
+    try {
+      const token = obtenerToken();
+      if (!token) {
+        showNotificationMessage('Debes iniciar sesión', 'error');
+        return;
+      }
+
+      await sendTestNotification(token);
+      showNotificationMessage('✅ Notificación de prueba enviada', 'success');
+    } catch (error: any) {
+      console.error('Error enviando notificación:', error);
+      showNotificationMessage(error.message || 'Error enviando notificación de prueba', 'error');
+    }
+  }
+
+  function showNotificationMessage(message: string, type: 'success' | 'error' | 'info' = 'info') {
+    notificationMessage = message;
+    notificationMessageType = type;
+    setTimeout(() => {
+      notificationMessage = null;
+    }, 5000);
+  }
+
+  // Lista de zonas horarias comunes
+  const timezones = [
+    "America/Mexico_City",
+    "America/Cancun",
+    "America/Monterrey",
+    "America/Tijuana",
+    "America/Los_Angeles",
+    "America/Denver",
+    "America/Chicago",
+    "America/New_York",
+    "America/Bogota",
+    "America/Lima",
+    "America/Santiago",
+    "America/Buenos_Aires",
+    "America/Sao_Paulo",
+    "Europe/Madrid",
+    "Europe/London",
+    "Europe/Paris",
+    "Europe/Berlin",
+    "Asia/Tokyo",
+    "Asia/Shanghai",
+    "Australia/Sydney"
+  ];
 
   // Funciones para eliminar datos
   function iniciarEliminacionDatos() {
@@ -355,47 +504,86 @@
     <section class="bg-bg_secondary border border-border rounded-lg p-6">
       <h2 class="text-xl font-semibold text-text_primary mb-4">🔔 Notificaciones</h2>
       
+      {#if !notificationSupported}
+        <div class="bg-warning/10 border border-warning rounded p-3 mb-4">
+          <p class="text-warning text-sm">⚠️ Tu navegador no soporta notificaciones push</p>
+        </div>
+      {/if}
+
+      {#if notificationMessage}
+        <div class="mb-4 p-3 rounded border {notificationMessageType === 'success' ? 'bg-success/10 border-success text-success' : notificationMessageType === 'error' ? 'bg-accent/10 border-accent text-accent' : 'bg-blue-500/10 border-blue-500 text-blue-500'}">
+          <p class="text-sm">{notificationMessage}</p>
+        </div>
+      {/if}
+      
       <div class="space-y-4">
         <div class="flex items-center justify-between">
           <div>
             <p class="text-text_primary">Notificaciones push</p>
             <p class="text-text_secondary text-sm">Recibe alertas de tus hábitos</p>
+            {#if notificationPermission === 'denied'}
+              <p class="text-accent text-xs mt-1">⚠️ Permiso denegado en el navegador</p>
+            {/if}
           </div>
           <button
             type="button"
             aria-label="Activar notificaciones push"
-            onclick={() => notificaciones = !notificaciones}
-            class="w-12 h-6 rounded-full transition-all {notificaciones ? 'bg-success' : 'bg-bg_input border border-border'}"
+            onclick={toggleNotificaciones}
+            disabled={!notificationSupported || notificationPermission === 'denied'}
+            class="w-12 h-6 rounded-full transition-all {notificaciones ? 'bg-success' : 'bg-bg_input border border-border'} disabled:opacity-50"
           >
             <div class="w-5 h-5 rounded-full bg-white shadow transition-transform {notificaciones ? 'translate-x-6' : 'translate-x-0.5'}"></div>
           </button>
         </div>
 
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-text_primary">Recordatorios diarios</p>
-            <p class="text-text_secondary text-sm">Te recordamos completar tus hábitos</p>
+        {#if notificaciones}
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-text_primary">Recordatorios diarios</p>
+              <p class="text-text_secondary text-sm">Te recordamos completar tus hábitos</p>
+            </div>
+            <button
+              type="button"
+              aria-label="Activar recordatorios diarios"
+              onclick={toggleRecordatorios}
+              class="w-12 h-6 rounded-full transition-all {recordatorios ? 'bg-success' : 'bg-bg_input border border-border'}"
+            >
+              <div class="w-5 h-5 rounded-full bg-white shadow transition-transform {recordatorios ? 'translate-x-6' : 'translate-x-0.5'}"></div>
+            </button>
           </div>
-          <button
-            type="button"
-            aria-label="Activar recordatorios diarios"
-            onclick={() => recordatorios = !recordatorios}
-            class="w-12 h-6 rounded-full transition-all {recordatorios ? 'bg-success' : 'bg-bg_input border border-border'}"
-          >
-            <div class="w-5 h-5 rounded-full bg-white shadow transition-transform {recordatorios ? 'translate-x-6' : 'translate-x-0.5'}"></div>
-          </button>
-        </div>
 
-        {#if recordatorios}
-          <div>
-            <label for="hora" class="block text-text_secondary text-sm mb-1">Hora del recordatorio</label>
-            <input
-              id="hora"
-              type="time"
-              bind:value={horaRecordatorio}
-              class="bg-bg_input border border-border rounded px-3 py-2 text-text_primary focus:border-accent focus:outline-none"
-            />
-          </div>
+          {#if recordatorios}
+            <div class="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label for="hora" class="block text-text_secondary text-sm mb-1">Hora del recordatorio</label>
+                <input
+                  id="hora"
+                  type="time"
+                  bind:value={horaRecordatorio}
+                  class="w-full bg-bg_input border border-border rounded px-3 py-2 text-text_primary focus:border-accent focus:outline-none"
+                />
+              </div>
+              <div>
+                <label for="timezone" class="block text-text_secondary text-sm mb-1">Zona horaria</label>
+                <select
+                  id="timezone"
+                  bind:value={timezone}
+                  class="w-full bg-bg_input border border-border rounded px-3 py-2 text-text_primary focus:border-accent focus:outline-none"
+                >
+                  {#each timezones as tz}
+                    <option value={tz}>{tz}</option>
+                  {/each}
+                </select>
+              </div>
+            </div>
+          {/if}
+
+          <button
+            onclick={handleEnviarPrueba}
+            class="w-full py-2 px-4 rounded border border-accent text-accent hover:bg-accent/10 transition-colors text-sm font-medium"
+          >
+            🔔 Enviar notificación de prueba
+          </button>
         {/if}
       </div>
     </section>
