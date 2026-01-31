@@ -251,9 +251,10 @@ async def send_scheduled_reminders(
 ):
     """
     Envía recordatorios a usuarios que tienen la hora actual configurada.
-    Cloud Scheduler llama este endpoint cada minuto.
+    Cloud Scheduler llama este endpoint cada 30 minutos.
+    Tiene una ventana de tolerancia de ±5 minutos.
     """
-    from datetime import datetime
+    from datetime import datetime, timedelta
     from zoneinfo import ZoneInfo
     
     # Obtener usuarios con recordatorios activos
@@ -273,10 +274,19 @@ async def send_scheduled_reminders(
             # Obtener hora actual en zona horaria del usuario
             user_tz = ZoneInfo(user.timezone or "America/Santo_Domingo")
             now_user = datetime.now(user_tz)
-            current_time = now_user.strftime("%H:%M")
             
-            # ¿Coincide con la hora del recordatorio?
-            if current_time == (user.hora_recordatorio or "08:00"):
+            # Parsear hora del recordatorio del usuario
+            hora_recordatorio = user.hora_recordatorio or "08:00"
+            hora, minuto = map(int, hora_recordatorio.split(":"))
+            
+            # Crear datetime del recordatorio para hoy
+            recordatorio_hoy = now_user.replace(hour=hora, minute=minuto, second=0, microsecond=0)
+            
+            # Calcular diferencia en minutos
+            diferencia = abs((now_user - recordatorio_hoy).total_seconds() / 60)
+            
+            # ¿Está dentro de la ventana de ±5 minutos?
+            if diferencia <= 5:
                 notification_stats = await push_service.send_to_user(
                     db=db,
                     user_id=user.id,
