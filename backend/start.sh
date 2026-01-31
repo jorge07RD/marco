@@ -17,7 +17,7 @@ alembic current || echo "⚠️  No hay versión actual (primera migración)"
 
 echo ""
 echo "🔄 Ejecutando migraciones de Alembic..."
-alembic upgrade head -v
+alembic upgrade head
 
 echo ""
 echo "✅ Migraciones completadas exitosamente"
