@@ -1,18 +1,22 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+import logging
 
 from app.config import get_settings
 from app.database import init_db
 from app.routers import usuarios, categorias, habitos, registros, habito_dias, auth, analisis, notifications
 
 settings = get_settings()
+logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
     await init_db()
+    # Log CORS configuration
+    logger.info(f"🌐 CORS configurado para: {settings.cors_origins_list}")
     yield
     # Shutdown
 
@@ -29,6 +33,9 @@ app = FastAPI(
 
 # CORS middleware para permitir requests del frontend
 # Los orígenes permitidos se configuran en .env (CORS_ORIGINS)
+logger.info(f"📋 Variable CORS_ORIGINS raw: {settings.cors_origins}")
+logger.info(f"🌐 CORS origins parsed: {settings.cors_origins_list}")
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins_list,
@@ -67,5 +74,15 @@ async def health_check():
         "status": "healthy",
         "app": settings.app_name,
         "version": settings.api_version,
+        "environment": settings.environment
+    }
+
+
+@app.get("/debug/cors")
+async def debug_cors():
+    """Endpoint de debug para verificar configuración CORS."""
+    return {
+        "cors_origins_raw": settings.cors_origins,
+        "cors_origins_list": settings.cors_origins_list,
         "environment": settings.environment
     }
