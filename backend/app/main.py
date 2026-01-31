@@ -36,10 +36,24 @@ app = FastAPI(
 logger.info(f"📋 Variable CORS_ORIGINS raw: {settings.cors_origins}")
 logger.info(f"🌐 CORS origins parsed: {settings.cors_origins_list}")
 
+# En producción, permitir todos los orígenes temporalmente para debugging
+# IMPORTANTE: ["*"] no funciona con credentials, así que usamos regex
+if settings.is_production:
+    # Permitir cualquier origen en producción temporalmente
+    cors_origins = ["*"]
+    allow_credentials = False  # No se puede usar con wildcard
+    logger.warning("⚠️  CORS en modo permisivo (solo para debugging)")
+else:
+    cors_origins = settings.cors_origins_list
+    allow_credentials = True
+
+logger.info(f"🔓 CORS origins efectivos: {cors_origins}")
+logger.info(f"🔐 Allow credentials: {allow_credentials}")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.cors_origins_list,
-    allow_credentials=True,
+    allow_origins=cors_origins,
+    allow_credentials=allow_credentials,
     allow_methods=["*"],
     allow_headers=["*"],
 )
