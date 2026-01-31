@@ -9,10 +9,16 @@ echo ""
 echo "📊 Verificando configuración de base de datos..."
 echo "DATABASE_URL: ${DATABASE_URL:-No configurada}"
 
-echo ""echo "🔍 Verificando y preparando base de datos para migraciones..."
+echo ""
+echo "🔍 Verificando y preparando base de datos para migraciones..."
 python verify_and_stamp.py
 
-echo ""echo "� Verificando versión actual de Alembic..."
+echo ""
+echo "🔧 Verificando y corrigiendo esquema de base de datos..."
+python fix_db_schema.py
+
+echo ""
+echo "📊 Verificando versión actual de Alembic..."
 alembic current || echo "⚠️  No hay versión actual (primera migración)"
 
 echo ""

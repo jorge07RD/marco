@@ -1,7 +1,9 @@
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 import logging
+import traceback
 
 from app.config import get_settings
 from app.database import init_db
@@ -14,11 +16,20 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
-    await init_db()
-    # Log CORS configuration
-    logger.info(f"🌐 CORS configurado para: {settings.cors_origins_list}")
+    try:
+        logger.info("🚀 Iniciando aplicación...")
+        logger.info(f"🌍 Entorno: {settings.environment}")
+        logger.info(f"🗄️  Database URL: {settings.database_url[:50]}...")
+        await init_db()
+        logger.info("✅ Base de datos inicializada correctamente")
+        logger.info(f"🌐 CORS configurado para: {settings.cors_origins_list}")
+    except Exception as e:
+        logger.error(f"❌ Error al inicializar la aplicación: {str(e)}")
+        logger.error(f"📋 Traceback: {traceback.format_exc()}")
+        # No lanzar la excepción para que la app siga corriendo
     yield
     # Shutdown
+    logger.info("👋 Cerrando aplicación...")
 
 
 
@@ -56,7 +67,54 @@ app.add_middleware(
     allow_credentials=allow_credentials,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
+
+
+# Handler explícito para OPTIONS (preflight CORS)
+@app.options("/{rest_of_path:path}")
+async def preflight_handler(request: Request, rest_of_path: str):
+    """Maneja requests OPTIONS para CORS preflight."""
+    origin = request.headers.get("origin", "*")
+    logger.info(f"🔧 OPTIONS request desde: {origin} para: /{rest_of_path}")
+    
+    response = JSONResponse(content={"status": "ok"})
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS, PATCH"
+    response.headers["Access-Control-Allow-Headers"] = "*"
+    response.headers["Access-Control-Max-Age"] = "3600"
+    return response
+
+
+# Manejador global de excepciones para agregar headers CORS incluso en errores
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    """Maneja todas las excepciones no capturadas y agrega headers CORS."""
+    logger.error(f"❌ Error no manejado: {str(exc)}")
+    logger.error(f"📍 Path: {request.url.path}")
+    logger.error(f"🔍 Method: {request.method}")
+    logger.error(f"🌍 Headers: {dict(request.headers)}")
+    logger.error(f"📋 Traceback: {traceback.format_exc()}")
+    
+    # Crear respuesta de error
+    response = JSONResponse(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        content={
+            "detail": "Error interno del servidor",
+            "error": str(exc),
+            "type": type(exc).__name__,
+            "path": str(request.url.path)
+        }
+    )
+    
+    # Agregar headers CORS manualmente (modo permisivo total)
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Methods"] = "*"
+    response.headers["Access-Control-Allow-Headers"] = "*"
+    response.headers["Access-Control-Expose-Headers"] = "*"
+    
+    return response
+
 
 # Routers - Todos bajo el prefijo /api
 app.include_router(auth.router, prefix="/api")
