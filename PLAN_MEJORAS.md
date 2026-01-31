@@ -67,18 +67,19 @@ alembic init migrations
 ```
 
 **Tareas:**
-- [ ] Configurar Alembic en `alembic.ini`
-- [ ] Conectar con `app/database.py`
-- [ ] Crear migración inicial desde modelos actuales
+- [x] Configurar Alembic en `alembic.ini` ✅
+- [x] Conectar con `app/database.py` ✅
+- [x] Crear migración inicial desde modelos actuales ✅
 - [ ] Agregar comando `make migrate` al proyecto
-- [ ] Documentar proceso en README
+- [x] Documentar proceso en README ✅
 
-**Archivos a crear:**
-- `backend/alembic.ini`
-- `backend/migrations/env.py`
-- `backend/migrations/versions/001_initial.py`
+**Archivos creados:**
+- `backend/alembic.ini` ✅
+- `backend/migrations/env.py` ✅
+- `backend/migrations/versions/0a5df8ebbac4_initial_baseline.py` ✅
 
 **Estimación:** 1-2 días
+**Estado:** 🟢 COMPLETADO (2026-01-31)
 
 ---
 
@@ -449,7 +450,7 @@ jobs:
 
 ### Semana 1-2: Fundamentos Críticos
 - 🟡 Setup de testing (backend ✅ + frontend ❌)
-- ❌ Alembic migrations
+- 🟢 Alembic migrations ✅
 - 🟡 Secrets management (75% completado)
 
 ### Semana 3-4: Seguridad y Calidad
@@ -521,12 +522,12 @@ Este plan está diseñado para ser **incremental y pragmático**. No intentes ha
 ---
 
 **Creado:** 2025-12-13
-**Última actualización:** 2026-01-20
-**Versión del plan:** 1.1
+**Última actualización:** 2026-01-31
+**Versión del plan:** 1.2
 
 ---
 
-## 📝 Resumen de Progreso (2026-01-20)
+## 📝 Resumen de Progreso (2026-01-31)
 
 ### ✅ Completadas
 1. **Testing Backend** - Estructura completa de tests (~1197 líneas)
@@ -534,6 +535,7 @@ Este plan está diseñado para ser **incremental y pragmático**. No intentes ha
 3. **Docker Compose** - Orquestación completa backend + frontend
 4. **API Versioning** - Prefijo `/api` implementado
 5. **.env Management** - Archivos .env y .env.example configurados
+6. **Alembic Migrations** - Sistema de migraciones configurado y documentado (2026-01-31)
 
 ### 🟡 Parcialmente Completadas
 1. **Secrets Management** - Falta validación de SECRET_KEY en producción (75%)
@@ -541,7 +543,7 @@ Este plan está diseñado para ser **incremental y pragmático**. No intentes ha
 3. **Test Coverage** - Backend ~50%, Frontend 0%
 
 ### ❌ Pendientes Prioritarias
-1. **Alembic Migrations** - Sistema de migraciones de BD
+1. ~~**Alembic Migrations**~~ - 🟢 COMPLETADO
 2. **Nomenclatura PEP8** - Refactorizar clases a PascalCase
 3. **SQLAlchemy Relationships** - Optimizar consultas
 4. **Validación de Contraseñas** - Requisitos de complejidad

@@ -77,6 +77,7 @@ backend/
 ├── app/
 │   ├── __init__.py
 │   ├── main.py              # Aplicación principal FastAPI
+│   ├── config.py            # Configuración desde variables de entorno
 │   ├── database.py          # Configuración de base de datos
 │   ├── models.py            # Modelos SQLAlchemy
 │   ├── schemas.py           # Esquemas Pydantic
@@ -89,6 +90,10 @@ backend/
 │       ├── registros.py     # CRUD de registros
 │       ├── habito_dias.py   # Gestión de días de hábitos
 │       └── analisis.py      # Endpoints de análisis y reportes
+├── migrations/              # Migraciones de Alembic
+│   ├── env.py               # Configuración del entorno
+│   └── versions/            # Archivos de migración
+├── alembic.ini              # Configuración de Alembic
 ├── app.db                   # Base de datos SQLite
 └── .env                     # Variables de entorno
 ```
@@ -104,7 +109,7 @@ Ver [AUTENTICACION.md](../AUTENTICACION.md) para más detalles.
 
 ## Base de Datos
 
-El proyecto usa SQLite con SQLAlchemy asíncrono. La base de datos se crea automáticamente al iniciar la aplicación.
+El proyecto usa SQLite con SQLAlchemy asíncrono y **Alembic** para migraciones.
 
 ### Modelos principales:
 - **usuarios** - Usuarios del sistema
@@ -113,3 +118,52 @@ El proyecto usa SQLite con SQLAlchemy asíncrono. La base de datos se crea autom
 - **registros** - Registros diarios
 - **progreso_habitos** - Progreso de hábitos por día
 - **habito_dias** - Días específicos de hábitos
+
+## Migraciones con Alembic
+
+El proyecto usa Alembic para gestionar cambios en el esquema de la base de datos.
+
+### Comandos principales
+
+```bash
+# Ver versión actual de la base de datos
+uv run alembic current
+
+# Ver historial de migraciones
+uv run alembic history
+
+# Aplicar todas las migraciones pendientes
+uv run alembic upgrade head
+
+# Revertir la última migración
+uv run alembic downgrade -1
+
+# Crear nueva migración automática (detecta cambios en models.py)
+uv run alembic revision --autogenerate -m "descripcion_del_cambio"
+
+# Crear migración manual vacía
+uv run alembic revision -m "descripcion_del_cambio"
+```
+
+### Flujo de trabajo para cambios de esquema
+
+1. Modifica los modelos en `app/models.py`
+2. Genera la migración: `uv run alembic revision --autogenerate -m "descripcion"`
+3. Revisa el archivo generado en `migrations/versions/`
+4. Aplica la migración: `uv run alembic upgrade head`
+
+### Estructura de migraciones
+
+```
+backend/
+├── alembic.ini              # Configuración de Alembic
+├── migrations/
+│   ├── env.py               # Configuración del entorno (conecta con app/)
+│   ├── script.py.mako       # Template para nuevas migraciones
+│   └── versions/            # Archivos de migración
+│       └── xxxx_descripcion.py
+```
+
+### Producción
+
+En Docker, las migraciones se ejecutan automáticamente al iniciar el contenedor con `alembic upgrade head`.
