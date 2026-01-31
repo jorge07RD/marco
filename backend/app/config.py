@@ -61,6 +61,13 @@ class Settings(BaseSettings):
     # ===========================================
     cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
 
+    # ===========================================
+    # VAPID - Push Notifications
+    # ===========================================
+    vapid_public_key: str = ""
+    vapid_private_key: str = ""
+    vapid_claims_email: str = "mailto:admin@example.com"
+
     @property
     def cors_origins_list(self) -> List[str]:
         """Convierte la cadena de orígenes CORS en una lista."""

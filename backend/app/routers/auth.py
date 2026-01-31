@@ -98,6 +98,9 @@ async def register(
         nombre=new_user.nombre,
         email=new_user.email,
         ver_futuro=new_user.ver_futuro,
+        notificaciones_activas=new_user.notificaciones_activas or False,
+        hora_recordatorio=new_user.hora_recordatorio or "08:00",
+        timezone=new_user.timezone or "America/Santo_Domingo",
         created_at=new_user.created_at,
         updated_at=new_user.updated_at
     )
@@ -151,6 +154,9 @@ async def login(
         nombre=user.nombre,
         email=user.email,
         ver_futuro=user.ver_futuro,
+        notificaciones_activas=user.notificaciones_activas or False,
+        hora_recordatorio=user.hora_recordatorio or "08:00",
+        timezone=user.timezone or "America/Santo_Domingo",
         created_at=user.created_at,
         updated_at=user.updated_at
     )
@@ -185,6 +191,9 @@ async def get_me(
         nombre=current_user.nombre,
         email=current_user.email,
         ver_futuro=current_user.ver_futuro,
+        notificaciones_activas=current_user.notificaciones_activas or False,
+        hora_recordatorio=current_user.hora_recordatorio or "08:00",
+        timezone=current_user.timezone or "America/Santo_Domingo",
         created_at=current_user.created_at,
         updated_at=current_user.updated_at
     )
@@ -254,6 +263,9 @@ async def update_me(
         nombre=current_user.nombre,
         email=current_user.email,
         ver_futuro=current_user.ver_futuro,
+        notificaciones_activas=current_user.notificaciones_activas or False,
+        hora_recordatorio=current_user.hora_recordatorio or "08:00",
+        timezone=current_user.timezone or "America/Santo_Domingo",
         created_at=current_user.created_at,
         updated_at=current_user.updated_at
     )

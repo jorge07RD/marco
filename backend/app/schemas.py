@@ -8,6 +8,9 @@ class UsuarioBase(BaseModel):
     nombre: str = Field(..., min_length=1, max_length=100)
     email: EmailStr
     ver_futuro: bool = False
+    notificaciones_activas: bool = False
+    hora_recordatorio: str = "08:00"
+    timezone: str = "America/Santo_Domingo"
 
 
 class UsuarioCreate(UsuarioBase):
@@ -19,6 +22,9 @@ class UsuarioUpdate(BaseModel):
     email: Optional[EmailStr] = None
     contrasena: Optional[str] = Field(None, min_length=6)
     ver_futuro: Optional[bool] = None
+    notificaciones_activas: Optional[bool] = None
+    hora_recordatorio: Optional[str] = None
+    timezone: Optional[str] = None
 
 
 class UsuarioResponse(UsuarioBase):
@@ -302,3 +308,80 @@ class ProgresoHabitoDiaCalendario(BaseModel):
     programado: bool  # Si el hábito estaba programado para ese día
 
     model_config = ConfigDict(from_attributes=True)
+
+
+# ==================== Push Notifications Schemas ====================
+class PushSubscriptionCreate(BaseModel):
+    """Esquema para crear una suscripción push."""
+    endpoint: str = Field(..., description="URL del endpoint push del navegador")
+    p256dh_key: str = Field(..., description="Clave pública del cliente")
+    auth_key: str = Field(..., description="Token de autenticación")
+    user_agent: Optional[str] = Field(None, description="User agent del navegador")
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "endpoint": "https://fcm.googleapis.com/fcm/send/...",
+                "p256dh_key": "BNcR...",
+                "auth_key": "tBH...",
+                "user_agent": "Mozilla/5.0..."
+            }
+        }
+    )
+
+
+class PushSubscriptionResponse(BaseModel):
+    """Esquema de respuesta para suscripción push."""
+    id: int
+    usuario_id: int
+    endpoint: str
+    activa: bool
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class NotificationPreferencesUpdate(BaseModel):
+    """Esquema para actualizar preferencias de notificación."""
+    notificaciones_activas: Optional[bool] = None
+    hora_recordatorio: Optional[str] = Field(None, pattern=r"^([01]?[0-9]|2[0-3]):[0-5][0-9]$")
+    timezone: Optional[str] = None
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "notificaciones_activas": True,
+                "hora_recordatorio": "09:00",
+                "timezone": "America/Santo_Domingo"
+            }
+        }
+    )
+
+
+class NotificationPreferencesResponse(BaseModel):
+    """Esquema de respuesta para preferencias de notificación."""
+    notificaciones_activas: bool
+    hora_recordatorio: str
+    timezone: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class TestNotificationRequest(BaseModel):
+    """Esquema para enviar notificación de prueba."""
+    title: Optional[str] = Field("Prueba de notificación", description="Título de la notificación")
+    body: Optional[str] = Field("¡Las notificaciones funcionan correctamente!", description="Cuerpo de la notificación")
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "title": "Prueba",
+                "body": "Esta es una notificación de prueba"
+            }
+        }
+    )
+
+
+class VapidPublicKeyResponse(BaseModel):
+    """Esquema de respuesta para la clave pública VAPID."""
+    public_key: str = Field(..., description="Clave pública VAPID para suscripción push")

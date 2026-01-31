@@ -75,6 +75,9 @@ export interface Usuario {
   nombre: string;
   email: string;
   ver_futuro: boolean;
+  notificaciones_activas: boolean;
+  hora_recordatorio: string;
+  timezone: string;
   created_at: string;
   updated_at: string | null;
 }
@@ -83,6 +86,9 @@ export interface UsuarioUpdate {
   nombre?: string;
   email?: string;
   ver_futuro?: boolean;
+  notificaciones_activas?: boolean;
+  hora_recordatorio?: string;
+  timezone?: string;
 }
 
 // Habito

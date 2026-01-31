@@ -3,17 +3,37 @@
   import { obtenerUsuarioActual, updateUsuario, getCategorias, crearCategoria, updateCategoria, deleteCategoria, verificarContrasena, eliminarTodosLosDatos, eliminarCuenta, logout, type Categoria } from '$lib/api';
   import { authStore } from '$lib/stores/auth.svelte';
   import ConfirmModal from '$lib/components/ConfirmModal.svelte';
+  import {
+    isPushSupported,
+    getNotificationPermission,
+    subscribeToPush,
+    unsubscribeFromPush,
+    hasActivePushSubscription,
+    getNotificationPreferences,
+    updateNotificationPreferences,
+    sendTestNotification,
+    TIMEZONES
+  } from '$lib/pushNotifications';
 
   // Configuración del usuario
   let nombreUsuario = $state("");
   let email = $state("");
   let verFuturo = $state(false);
-  let notificaciones = $state(true);
-  let recordatorios = $state(true);
+  let notificaciones = $state(false);
   let horaRecordatorio = $state("08:00");
+  let timezone = $state("America/Santo_Domingo");
   let temaOscuro = $state(true);
   let saving = $state(false);
   let saved = $state(false);
+
+  // Estados de notificaciones push
+  let pushSupported = $state(false);
+  let pushPermission = $state<NotificationPermission>('default');
+  let pushSubscribed = $state(false);
+  let pushLoading = $state(false);
+  let pushError = $state<string | null>(null);
+  let testingNotification = $state(false);
+  let testResult = $state<{success: boolean; message: string} | null>(null);
 
   // Gestión de categorías
   let categorias = $state<Categoria[]>([]);
@@ -46,7 +66,85 @@
 
     // Cargar categorías
     await cargarCategorias();
+
+    // Inicializar estado de notificaciones push
+    await initPushNotifications();
   });
+
+  async function initPushNotifications() {
+    pushSupported = isPushSupported();
+    if (!pushSupported) return;
+
+    pushPermission = getNotificationPermission();
+    pushSubscribed = await hasActivePushSubscription();
+
+    // Cargar preferencias del servidor
+    const prefs = await getNotificationPreferences();
+    if (prefs) {
+      notificaciones = prefs.notificaciones_activas;
+      horaRecordatorio = prefs.hora_recordatorio;
+      timezone = prefs.zona_horaria;
+    }
+  }
+
+  async function toggleNotificaciones() {
+    if (pushLoading) return;
+    pushLoading = true;
+    pushError = null;
+    testResult = null;
+
+    try {
+      if (!notificaciones) {
+        // Activar notificaciones
+        const success = await subscribeToPush();
+        if (success) {
+          notificaciones = true;
+          pushSubscribed = true;
+          await updateNotificationPreferences({ notificaciones_activas: true });
+        } else {
+          pushError = 'No se pudieron activar las notificaciones. Verifica los permisos del navegador.';
+        }
+      } else {
+        // Desactivar notificaciones
+        await unsubscribeFromPush();
+        notificaciones = false;
+        pushSubscribed = false;
+        await updateNotificationPreferences({ notificaciones_activas: false });
+      }
+    } catch (error) {
+      pushError = 'Error al cambiar el estado de las notificaciones';
+      console.error(error);
+    } finally {
+      pushLoading = false;
+    }
+  }
+
+  async function handleHoraChange(e: Event) {
+    const target = e.target as HTMLInputElement;
+    horaRecordatorio = target.value;
+    await updateNotificationPreferences({ hora_recordatorio: horaRecordatorio });
+  }
+
+  async function handleZonaChange(e: Event) {
+    const target = e.target as HTMLSelectElement;
+    timezone = target.value;
+    await updateNotificationPreferences({ zona_horaria: timezone });
+  }
+
+  async function handleTestNotification() {
+    if (testingNotification) return;
+    testingNotification = true;
+    testResult = null;
+
+    const result = await sendTestNotification();
+    testResult = result;
+    testingNotification = false;
+
+    // Limpiar mensaje después de 5 segundos
+    setTimeout(() => {
+      testResult = null;
+    }, 5000);
+  }
 
   async function cargarCategorias() {
     try {
@@ -354,50 +452,91 @@
     <!-- Notificaciones -->
     <section class="bg-bg_secondary border border-border rounded-lg p-6">
       <h2 class="text-xl font-semibold text-text_primary mb-4">🔔 Notificaciones</h2>
-      
-      <div class="space-y-4">
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-text_primary">Notificaciones push</p>
-            <p class="text-text_secondary text-sm">Recibe alertas de tus hábitos</p>
-          </div>
-          <button
-            type="button"
-            aria-label="Activar notificaciones push"
-            onclick={() => notificaciones = !notificaciones}
-            class="w-12 h-6 rounded-full transition-all {notificaciones ? 'bg-success' : 'bg-bg_input border border-border'}"
-          >
-            <div class="w-5 h-5 rounded-full bg-white shadow transition-transform {notificaciones ? 'translate-x-6' : 'translate-x-0.5'}"></div>
-          </button>
-        </div>
 
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-text_primary">Recordatorios diarios</p>
-            <p class="text-text_secondary text-sm">Te recordamos completar tus hábitos</p>
+      {#if !pushSupported}
+        <p class="text-text_secondary text-sm">
+          Tu navegador no soporta notificaciones push.
+        </p>
+      {:else}
+        <div class="space-y-4">
+          <!-- Toggle de notificaciones -->
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-text_primary">Notificaciones push</p>
+              <p class="text-text_secondary text-sm">
+                {#if pushPermission === 'denied'}
+                  Bloqueadas por el navegador
+                {:else}
+                  Recibe recordatorios de tus hábitos
+                {/if}
+              </p>
+            </div>
+            <button
+              type="button"
+              aria-label="Activar notificaciones push"
+              onclick={toggleNotificaciones}
+              disabled={pushLoading || pushPermission === 'denied'}
+              class="w-12 h-6 rounded-full transition-all disabled:opacity-50 disabled:cursor-not-allowed {notificaciones ? 'bg-success' : 'bg-bg_input border border-border'}"
+            >
+              <div class="w-5 h-5 rounded-full bg-white shadow transition-transform {notificaciones ? 'translate-x-6' : 'translate-x-0.5'}"></div>
+            </button>
           </div>
-          <button
-            type="button"
-            aria-label="Activar recordatorios diarios"
-            onclick={() => recordatorios = !recordatorios}
-            class="w-12 h-6 rounded-full transition-all {recordatorios ? 'bg-success' : 'bg-bg_input border border-border'}"
-          >
-            <div class="w-5 h-5 rounded-full bg-white shadow transition-transform {recordatorios ? 'translate-x-6' : 'translate-x-0.5'}"></div>
-          </button>
-        </div>
 
-        {#if recordatorios}
-          <div>
-            <label for="hora" class="block text-text_secondary text-sm mb-1">Hora del recordatorio</label>
-            <input
-              id="hora"
-              type="time"
-              bind:value={horaRecordatorio}
-              class="bg-bg_input border border-border rounded px-3 py-2 text-text_primary focus:border-accent focus:outline-none"
-            />
-          </div>
-        {/if}
-      </div>
+          {#if pushError}
+            <p class="text-accent text-sm">{pushError}</p>
+          {/if}
+
+          {#if notificaciones}
+            <!-- Hora del recordatorio -->
+            <div>
+              <label for="hora" class="block text-text_secondary text-sm mb-1">Hora del recordatorio</label>
+              <input
+                id="hora"
+                type="time"
+                value={horaRecordatorio}
+                onchange={handleHoraChange}
+                class="bg-bg_input border border-border rounded px-3 py-2 text-text_primary focus:border-accent focus:outline-none"
+              />
+            </div>
+
+            <!-- Zona horaria -->
+            <div>
+              <label for="zona" class="block text-text_secondary text-sm mb-1">Zona horaria</label>
+              <select
+                id="zona"
+                value={timezone}
+                onchange={handleZonaChange}
+                class="w-full bg-bg_input border border-border rounded px-3 py-2 text-text_primary focus:border-accent focus:outline-none"
+              >
+                {#each TIMEZONES as tz}
+                  <option value={tz.value}>{tz.label}</option>
+                {/each}
+              </select>
+            </div>
+
+            <!-- Botón de prueba -->
+            <div class="pt-2">
+              <button
+                type="button"
+                onclick={handleTestNotification}
+                disabled={testingNotification || !pushSubscribed}
+                class="w-full py-2 px-4 rounded border border-border text-text_secondary hover:border-success hover:text-success transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {#if testingNotification}
+                  Enviando...
+                {:else}
+                  🔔 Enviar notificación de prueba
+                {/if}
+              </button>
+              {#if testResult}
+                <p class="text-sm mt-2 {testResult.success ? 'text-success' : 'text-accent'}">
+                  {testResult.message}
+                </p>
+              {/if}
+            </div>
+          {/if}
+        </div>
+      {/if}
     </section>
 
     <!-- Apariencia -->

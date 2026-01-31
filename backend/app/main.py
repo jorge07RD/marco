@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
 from app.database import init_db
-from app.routers import usuarios, categorias, habitos, registros, habito_dias, auth, analisis
+from app.routers import usuarios, categorias, habitos, registros, habito_dias, auth, analisis, notifications
 
 settings = get_settings()
 
@@ -45,6 +45,7 @@ app.include_router(habitos.router, prefix="/api")
 app.include_router(registros.router, prefix="/api")
 app.include_router(habito_dias.router, prefix="/api")
 app.include_router(analisis.router, prefix="/api")
+app.include_router(notifications.router, prefix="/api")
 
 
 @app.get("/")

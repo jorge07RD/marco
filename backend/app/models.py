@@ -10,6 +10,11 @@ class usuario(Base):
     email = Column(String, unique=True, index=True, nullable=False)
     contrasena = Column(String, nullable=False)
     ver_futuro = Column(Boolean, default=False)  # Permite ver fechas futuras
+    # Campos de notificaciones push (nombres de columnas existentes en la BD)
+    notificaciones_activas = Column(Boolean, default=False)
+    recordatorios_activos = Column(Boolean, default=False)
+    hora_recordatorio = Column(String, default="08:00")  # Formato HH:MM
+    timezone = Column(String, default="America/Santo_Domingo")
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
@@ -86,3 +91,17 @@ class habito_dias(Base):
     estado = Column(Boolean, default=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+
+class push_subscriptions(Base):
+    """Suscripciones push para notificaciones del navegador"""
+    __tablename__ = "push_subscriptions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    usuario_id = Column(Integer, ForeignKey("usuarios.id"), nullable=False)
+    endpoint = Column(String, nullable=False, unique=True)
+    p256dh_key = Column(String, nullable=False)  # Clave pública del cliente
+    auth_key = Column(String, nullable=False)  # Token de autenticación
+    user_agent = Column(String, nullable=True)  # Navegador/dispositivo
+    activa = Column(Boolean, default=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
