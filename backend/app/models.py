@@ -19,6 +19,7 @@ class usuario(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
 
+
 class categorias(Base):
     __tablename__ = "categorias"
 
